@@ -1,0 +1,25 @@
+{
+  "name": "My Sepolia Token List",
+  "timestamp": "2025-06-30T00:00:00.000Z",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0
+  },
+  "tokens": [
+    {
+      "chainId": 11155111,
+      "name": "MOOP",
+      "symbol": "MOOP",
+      "address": "0x3091cd5408F5841681774f7fD6222481ccE7Fe69",
+      "decimals": 18
+    },
+    {
+      "chainId": 11155111,
+      "name": "Wrapped Ether",
+      "symbol": "WETH",
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "decimals": 18
+    }
+  ]
+}

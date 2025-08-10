@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Uniswap V3 Deployment</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #output { white-space: pre-wrap; margin-top: 20px; }
+    button { padding: 10px 20px; font-size: 16px; margin-right: 10px; }
+    button:disabled { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <h1>Deploy Uniswap V3 Contracts to Sepolia</h1>
+  <button onclick="deployLibraries()">Deploy Libraries</button>
+  <button onclick="deployWETH9()" id="weth9Button" disabled>Deploy WETH9</button>
+  <button onclick="deployUniswapV3Factory()" id="factoryButton" disabled>Deploy UniswapV3Factory</button>
+  <button onclick="deployUniswapV3PoolDeployer()" id="poolDeployerButton" disabled>Deploy UniswapV3PoolDeployer</button>
+  <button onclick="deployNonfungibleTokenPositionDescriptor()" id="nftPositionButton" disabled>Deploy NonfungibleTokenPositionDescriptor</button>
+  <button onclick="deployNonfungiblePositionManager()" id="positionManagerButton" disabled>Deploy NonfungiblePositionManager</button>
+  <button onclick="deploySwapRouter()" id="swapRouterButton" disabled>Deploy SwapRouter</button>
+  <p id="output"></p>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+  <script>
+    let deployedAddresses = {};
+
+    async function fetchArtifact(contractName, path = '') {
+      try {
+        const url = path ? `/artifacts/contracts/${path}/${contractName}.sol/${contractName}.json` : `/artifacts/contracts/${contractName}.sol/${contractName}.json`;
+        console.log(`Fetching artifact from: ${url}`);
+        const response = await fetch(url);
+        console.log(`Response status: ${response.status}`);
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Failed to fetch ${contractName} artifact: Status ${response.status}, Response: ${text.slice(0, 100)}...`);
+        }
+        const artifact = await response.json();
+        if (!artifact.abi || !artifact.bytecode) {
+          throw new Error(`Invalid artifact for ${contractName}: Missing abi or bytecode`);
+        }
+        console.log(`Bytecode size for ${contractName}: ${artifact.bytecode.length / 2} bytes`);
+        return { abi: artifact.abi, bytecode: artifact.bytecode };
+      } catch (error) {
+        throw new Error(`Error fetching ${contractName} artifact: ${error.message}`);
+      }
+    }
+
+    async function checkWallet() {
+      const output = document.getElementById('output');
+      if (!window.ethereum) {
+        output.innerText = 'Please install MetaMask!';
+        throw new Error('MetaMask not installed');
+      }
+
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const address = await signer.getAddress();
+      output.innerText += `Connected: ${address}\n`;
+
+      const balance = await provider.getBalance(address);
+      output.innerText += `Account balance: ${ethers.utils.formatEther(balance)} ETH\n`;
+      if (balance.isZero()) {
+        output.innerText += 'Error: Account has 0 ETH. Please fund it with Sepolia ETH.\n';
+        throw new Error('Account has 0 ETH');
+      }
+
+      const network = await provider.getNetwork();
+      if (network.chainId !== 11155111) {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }],
+        });
+        output.innerText += 'Switched to Sepolia network\n';
+      }
+      return { provider, signer };
+    }
+
+    async function saveLibrariesToFile() {
+      try {
+        console.log('Saving library addresses:', JSON.stringify(deployedAddresses, null, 2));
+        document.getElementById('output').innerText += '\nLibrary addresses logged to console. Save them to saveDeployArtifacts/libraries.json manually.\n';
+      } catch (error) {
+        console.error('Error saving libraries:', error);
+        document.getElementById('output').innerText += `\nError saving libraries: ${error.message}\n`;
+      }
+    }
+
+    async function deployLibraries() {
+      const output = document.getElementById('output');
+      try {
+        const { provider, signer } = await checkWallet();
+
+        // Deploy ChainId
+        output.innerText += `Fetching artifact for ChainId...\n`;
+        const chainIdArtifact = await fetchArtifact('ChainId', 'uniswap/libraries');
+        const chainIdFactory = new ethers.ContractFactory(chainIdArtifact.abi, chainIdArtifact.bytecode, signer);
+        output.innerText += `Deploying ChainId library...\n`;
+        const chainIdContract = await chainIdFactory.deploy({ gasLimit: 5000000 });
+        await chainIdContract.deployed();
+        output.innerText += `ChainId deployed to: ${chainIdContract.address}\n`;
+        deployedAddresses.ChainId = chainIdContract.address;
+
+        // Deploy TickMath
+        output.innerText += `Fetching artifact for TickMath...\n`;
+        const tickMathArtifact = await fetchArtifact('TickMath', 'uniswap/libraries');
+        const tickMathFactory = new ethers.ContractFactory(tickMathArtifact.abi, tickMathArtifact.bytecode, signer);
+        output.innerText += `Deploying TickMath library...\n`;
+        const tickMathContract = await tickMathFactory.deploy({ gasLimit: 5000000 });
+        await tickMathContract.deployed();
+        output.innerText += `TickMath deployed to: ${tickMathContract.address}\n`;
+        deployedAddresses.TickMath = tickMathContract.address;
+
+        // Deploy SqrtPriceMath
+        output.innerText += `Fetching artifact for SqrtPriceMath...\n`;
+        const sqrtPriceMathArtifact = await fetchArtifact('SqrtPriceMath', 'uniswap/libraries');
+        const sqrtPriceMathFactory = new ethers.ContractFactory(sqrtPriceMathArtifact.abi, sqrtPriceMathArtifact.bytecode, signer);
+        output.innerText += `Deploying SqrtPriceMath library...\n`;
+        const sqrtPriceMathContract = await sqrtPriceMathFactory.deploy({ gasLimit: 5000000 });
+        await sqrtPriceMathContract.deployed();
+        output.innerText += `SqrtPriceMath deployed to: ${sqrtPriceMathContract.address}\n`;
+        deployedAddresses.SqrtPriceMath = sqrtPriceMathContract.address;
+
+        // Deploy FullMath
+        output.innerText += `Fetching artifact for FullMath...\n`;
+        const fullMathArtifact = await fetchArtifact('FullMath', 'uniswap/libraries');
+        const fullMathFactory = new ethers.ContractFactory(fullMathArtifact.abi, fullMathArtifact.bytecode, signer);
+        output.innerText += `Deploying FullMath library...\n`;
+        const fullMathContract = await fullMathFactory.deploy({ gasLimit: 5000000 });
+        await fullMathContract.deployed();
+        output.innerText += `FullMath deployed to: ${fullMathContract.address}\n`;
+        deployedAddresses.FullMath = fullMathContract.address;
+
+        // Deploy SwapMath
+        output.innerText += `Fetching artifact for SwapMath...\n`;
+        const swapMathArtifact = await fetchArtifact('SwapMath', 'uniswap/libraries');
+        const swapMathFactory = new ethers.ContractFactory(swapMathArtifact.abi, swapMathArtifact.bytecode, signer);
+        output.innerText += `Deploying SwapMath library...\n`;
+        const swapMathContract = await swapMathFactory.deploy({ gasLimit: 5000000 });
+        await swapMathContract.deployed();
+        output.innerText += `SwapMath deployed to: ${swapMathContract.address}\n`;
+        deployedAddresses.SwapMath = swapMathContract.address;
+
+        // Deploy Tick
+        output.innerText += `Fetching artifact for Tick...\n`;
+        const tickArtifact = await fetchArtifact('Tick', 'uniswap/libraries');
+        const tickFactory = new ethers.ContractFactory(tickArtifact.abi, tickArtifact.bytecode, signer);
+        output.innerText += `Deploying Tick library...\n`;
+        const tickContract = await tickFactory.deploy({ gasLimit: 5000000 });
+        await tickContract.deployed();
+        output.innerText += `Tick deployed to: ${tickContract.address}\n`;
+        deployedAddresses.Tick = tickContract.address;
+
+        // Deploy Position
+        output.innerText += `Fetching artifact for Position...\n`;
+        const positionArtifact = await fetchArtifact('Position', 'uniswap/libraries');
+        const positionFactory = new ethers.ContractFactory(positionArtifact.abi, positionArtifact.bytecode, signer);
+        output.innerText += `Deploying Position library...\n`;
+        const positionContract = await positionFactory.deploy({ gasLimit: 5000000 });
+        await positionContract.deployed();
+        output.innerText += `Position deployed to: ${positionContract.address}\n`;
+        deployedAddresses.Position = positionContract.address;
+
+        // Deploy Oracle
+        output.innerText += `Fetching artifact for Oracle...\n`;
+        const oracleArtifact = await fetchArtifact('Oracle', 'uniswap/libraries');
+        const oracleFactory = new ethers.ContractFactory(oracleArtifact.abi, oracleArtifact.bytecode, signer);
+        output.innerText += `Deploying Oracle library...\n`;
+        const oracleContract = await oracleFactory.deploy({ gasLimit: 5000000 });
+        await oracleContract.deployed();
+        output.innerText += `Oracle deployed to: ${oracleContract.address}\n`;
+        deployedAddresses.Oracle = oracleContract.address;
+
+        // Deploy SVGUtils
+        output.innerText += `Fetching artifact for SVGUtils...\n`;
+        const svgUtilsArtifact = await fetchArtifact('SVGUtils', 'uniswap/libraries');
+        const svgUtilsFactory = new ethers.ContractFactory(svgUtilsArtifact.abi, svgUtilsArtifact.bytecode, signer);
+        output.innerText += `Deploying SVGUtils library...\n`;
+        const svgUtilsContract = await svgUtilsFactory.deploy({ gasLimit: 5000000 });
+        await svgUtilsContract.deployed();
+        output.innerText += `SVGUtils deployed to: ${svgUtilsContract.address}\n`;
+        deployedAddresses.SVGUtils = svgUtilsContract.address;
+
+        // Deploy NFTDescriptor
+        output.innerText += `Fetching artifact for NFTDescriptor...\n`;
+        const nftDescriptorArtifact = await fetchArtifact('NFTDescriptor', 'uniswap/libraries');
+        const nftDescriptorFactory = new ethers.ContractFactory(nftDescriptorArtifact.abi, nftDescriptorArtifact.bytecode, signer);
+        output.innerText += `Deploying NFTDescriptor library...\n`;
+        const nftDescriptorContract = await nftDescriptorFactory.deploy({ gasLimit: 5000000 });
+        await nftDescriptorContract.deployed();
+        output.innerText += `NFTDescriptor deployed to: ${nftDescriptorContract.address}\n`;
+        deployedAddresses.NFTDescriptor = nftDescriptorContract.address;
+
+        await saveLibrariesToFile();
+        document.getElementById('weth9Button').disabled = false;
+        output.innerText += '\nLibraries deployment successful! You can now deploy WETH9.\n';
+      } catch (error) {
+        console.error(error);
+        output.innerText += `\nError: ${error.message}\n`;
+        if (error.data) {
+          output.innerText += `Error data: ${JSON.stringify(error.data, null, 2)}\n`;
+        }
+      }
+    }
+
+    async function deployWETH9() {
+      const output = document.getElementById('output');
+      try {
+        const { provider, signer } = await checkWallet();
+
+        output.innerText += `Fetching artifact for WETH9...\n`;
+        const { abi, bytecode } = await fetchArtifact('WETH9', '');
+        const contractFactory = new ethers.ContractFactory(abi, bytecode, signer);
+
+        output.innerText += `Deploying WETH9...\n`;
+        const deployedContract = await contractFactory.deploy({ gasLimit: 5000000 });
+        await deployedContract.deployed();
+        output.innerText += `WETH9 deployed to: ${deployedContract.address}\n`;
+        deployedAddresses.WETH9 = deployedContract.address;
+
+        document.getElementById('factoryButton').disabled = false;
+        output.innerText += '\nWETH9 deployment successful! You can now deploy UniswapV3Factory.\n';
+      } catch (error) {
+        console.error(error);
+        output.innerText += `\nError: ${error.message}\n`;
+        if (error.data) {
+          output.innerText += `Error data: ${JSON.stringify(error.data, null, 2)}\n`;
+        }
+      }
+    }
+
+    async function deployUniswapV3Factory() {
+      const output = document.getElementById('output');
+      try {
+        const { provider, signer } = await checkWallet();
+
+        output.innerText += `Fetching artifact for UniswapV3Factory...\n`;
+        const { abi, bytecode } = await fetchArtifact('UniswapV3Factory', 'uniswap');
+        const contractFactory = new ethers.ContractFactory(abi, bytecode, signer);
+
+        output.innerText += `Deploying UniswapV3Factory...\n`;
+        const deployedContract = await contractFactory.deploy({ gasLimit: 5000000 });
+        await deployedContract.deployed();
+        output.innerText += `UniswapV3Factory deployed to: ${deployedContract.address}\n`;
+        deployedAddresses.UniswapV3Factory = deployedContract.address;
+
+        document.getElementById('poolDeployerButton').disabled = false;
+        output.innerText += '\nUniswapV3Factory deployment successful! You can now deploy UniswapV3PoolDeployer.\n';
+      } catch (error) {
+        console.error(error);
+        output.innerText += `\nError: ${error.message}\n`;
+        if (error.data) {
+          output.innerText += `Error data: ${JSON.stringify(error.data, null, 2)}\n`;
+        }
+      }
+    }
+
+    async function deployUniswapV3PoolDeployer() {
+      const output = document.getElementById('output');
+      try {
+        const { provider, signer } = await checkWallet();
+
+        output.innerText += `Fetching artifact for UniswapV3PoolDeployer...\n`;
+        const { abi, bytecode } = await fetchArtifact('UniswapV3PoolDeployer', 'uniswap');
+        const contractFactory = new ethers.ContractFactory(abi, bytecode, signer);
+
+        output.innerText += `Deploying UniswapV3PoolDeployer...\n`;
+        const deployedContract = await contractFactory.deploy({ gasLimit: 5000000 });
+        await deployedContract.deployed();
+        output.innerText += `UniswapV3PoolDeployer deployed to: ${deployedContract.address}\n`;
+        deployedAddresses.UniswapV3PoolDeployer = deployedContract.address;
+
+        document.getElementById('nftPositionButton').disabled = false;
+        output.innerText += '\nUniswapV3PoolDeployer deployment successful! You can now deploy NonfungibleTokenPositionDescriptor.\n';
+      } catch (error) {
+        console.error(error);
+        output.innerText += `\nError: ${error.message}\n`;
+        if (error.data) {
+          output.innerText += `Error data: ${JSON.stringify(error.data, null, 2)}\n`;
+        }
+      }
+    }
+
+    async function deployNonfungibleTokenPositionDescriptor() {
+      const output = document.getElementById('output');
+      try {
+        const { provider, signer } = await checkWallet();
+
+        output.innerText += `Fetching artifact for NonfungibleTokenPositionDescriptor...\n`;
+        const { abi, bytecode } = await fetchArtifact('NonfungibleTokenPositionDescriptor', 'uniswap');
+        const contractFactory = new ethers.ContractFactory(abi, bytecode, signer);
+
+        output.innerText += `Deploying NonfungibleTokenPositionDescriptor...\n`;
+        const deployedContract = await contractFactory.deploy(
+          deployedAddresses.WETH9,
+          deployedAddresses.NFTDescriptor,
+          { gasLimit: 7000000 }
+        );
+        await deployedContract.deployed();
+        output.innerText += `NonfungibleTokenPositionDescriptor deployed to: ${deployedContract.address}\n`;
+        deployedAddresses.NonfungibleTokenPositionDescriptor = deployedContract.address;
+
+        document.getElementById('positionManagerButton').disabled = false;
+        output.innerText += '\nNonfungibleTokenPositionDescriptor deployment successful! You can now deploy NonfungiblePositionManager.\n';
+      } catch (error) {
+        console.error(error);
+        output.innerText += `\nError: ${error.message}\n`;
+        if (error.data) {
+          output.innerText += `Error data: ${JSON.stringify(error.data, null, 2)}\n`;
+        }
+      }
+    }
+
+    async function deployNonfungiblePositionManager() {
+      const output = document.getElementById('output');
+      try {
+        const { provider, signer } = await checkWallet();
+
+        output.innerText += `Fetching artifact for NonfungiblePositionManager...\n`;
+        const { abi, bytecode } = await fetchArtifact('NonfungiblePositionManager', 'uniswap');
+        const contractFactory = new ethers.ContractFactory(abi, bytecode, signer);
+
+        output.innerText += `Deploying NonfungiblePositionManager...\n`;
+        const deployedContract = await contractFactory.deploy(
+          deployedAddresses.UniswapV3Factory,
+          deployedAddresses.UniswapV3PoolDeployer,
+          deployedAddresses.NonfungibleTokenPositionDescriptor,
+          { gasLimit: 7000000 }
+        );
+        await deployedContract.deployed();
+        output.innerText += `NonfungiblePositionManager deployed to: ${deployedContract.address}\n`;
+        deployedAddresses.NonfungiblePositionManager = deployedContract.address;
+
+        document.getElementById('swapRouterButton').disabled = false;
+        output.innerText += '\nNonfungiblePositionManager deployment successful! You can now deploy SwapRouter.\n';
+      } catch (error) {
+        console.error(error);
+        output.innerText += `\nError: ${error.message}\n`;
+        if (error.data) {
+          output.innerText += `Error data: ${JSON.stringify(error.data, null, 2)}\n`;
+        }
+      }
+    }
+
+    async function deploySwapRouter() {
+      const output = document.getElementById('output');
+      try {
+        const { provider, signer } = await checkWallet();
+
+        output.innerText += `Fetching artifact for SwapRouter...\n`;
+        const { abi, bytecode } = await fetchArtifact('SwapRouter', 'uniswap');
+        const contractFactory = new ethers.ContractFactory(abi, bytecode, signer);
+
+        output.innerText += `Deploying SwapRouter...\n`;
+        const deployedContract = await contractFactory.deploy(
+          deployedAddresses.UniswapV3Factory,
+          deployedAddresses.WETH9,
+          { gasLimit: 5000000 }
+        );
+        await deployedContract.deployed();
+        output.innerText += `SwapRouter deployed to: ${deployedContract.address}\n`;
+        deployedAddresses.SwapRouter = deployedContract.address;
+
+        output.innerText += '\nAll deployments successful!\n';
+      } catch (error) {
+        console.error(error);
+        output.innerText += `\nError: ${error.message}\n`;
+        if (error.data) {
+          output.innerText += `Error data: ${JSON.stringify(error.data, null, 2)}\n`;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

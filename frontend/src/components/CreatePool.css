@@ -1,0 +1,105 @@
+/* CreatePool.css */
+
+.create-pool {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.create-pool h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+}
+
+.create-pool p {
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  color: #a0a0a0;
+  text-align: center;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #d0d0d0;
+}
+
+.input-group input,
+.input-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #222;
+  color: #ffffff;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+.input-group input::placeholder {
+  color: #666;
+}
+
+button[type='submit'] {
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  color: #ffffff;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+button[type='submit']:hover {
+  background: linear-gradient(90deg, #0056b3, #003d80);
+  transform: translateY(-2px);
+}
+
+button[type='submit']:disabled {
+  background: #444;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error-message {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #ff4d4d;
+}
+
+.result-message {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #00cc88;
+}

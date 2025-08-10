@@ -1,0 +1,245 @@
+/* Swap.css */
+
+.swap-container {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 24px 20px 24px 20px;
+  background: #1c1c1e; /*#1c1c1e*/
+  border-radius: 20px;
+  box-shadow: 0 0 10px rgba(255, 102, 196, 0.2);
+  color: #aaa;
+  font-family: 'Segoe UI', sans-serif;
+  
+}
+
+.swap-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  margin-top: 2px;
+  font-size: 1.5rem;
+  color: #E86BD5;
+  
+}
+
+.token-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+
+.token-section label {
+  display: block;
+  font-weight: bold;
+}
+
+.token-input-group {
+  background: #2c2c2e;
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+}
+
+.token-input-group label {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+  color: #bbbbbb;
+}
+
+
+
+.token-input-group input[type='text'],
+.token-input-group input[type='number'] {
+  width: 100%;
+  background: #1c1c1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.token-input-group input:focus {
+  border-color: #00ff9d;
+  outline: none;
+  box-shadow: 0 0 5px #00ff9d;
+}
+
+.input-group{
+  border: 2px solid #00B8D9;
+  border-radius: 10px;
+  box-shadow: 0 0 5px #00ff9d;
+  padding: 8px;
+}
+
+
+.balance {
+  font-size: 0.8rem;
+  margin-top: 6px;
+  color: #888;
+}
+
+.amount-preview {
+  margin: 16px 0;
+  padding: 10px;
+  background: #2c2c2e;
+  border-radius: 10px;
+  color: #00ff9d;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.extra-info {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.swap-button,
+.reverse-button {
+  padding: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.swap-button {
+  display: flex;
+  background-color: #00B8D9;
+  color: #E004B4;
+  text-shadow: 1px 1px 1px #1a1a1aa8;
+  width: 100px;
+  height: 40px;
+  border-radius: 20px;
+  padding: 2px;
+  border: 4px solid #E004B4;
+  grid-column: 2;
+  margin: 0 auto;
+  justify-content: center;
+  align-self: center;
+}
+
+.swap-button:hover {
+  background-color: #00e68a;
+}
+
+.swap-button:disabled {
+  background-color: #444;
+  cursor: not-allowed;
+}
+
+.reverse-btn-wrapper {
+  margin: 0 auto;
+  /*background-color: #00ff9d;*/
+  align-self: center;
+}
+
+.reverse-button {
+  height: 50px;
+  width: 50px;
+  background-color: transparent;
+  color: #00ff9d;
+  border-radius: 50%;
+  padding: 2px;
+  margin: 0 auto;
+}
+
+.reverse-button:hover {
+  background-color: #444;
+}
+
+.swap-result {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #2c2c2e;
+  color: #fff;
+  text-align: center;
+}
+
+.connect-warning {
+  text-align: center;
+  font-size: 1rem;
+  color: #ffaa00;
+  margin-top: 16px;
+}
+
+
+
+.token-row input[type="number"],
+.token-row input[type="text"] {
+  flex: 1;
+  padding: 0.6rem;
+  border: 1px solid #444;
+  background-color: #2c2c2e;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+/*Drop Down Menu*/
+.token-select {
+  float: right;
+  border: 1px solid #00ff9d66;
+  color: limegreen;
+  border-radius: 5px;
+  padding: 4px 8px;
+  margin: 8px;
+  background-color: #2c2c2e;
+}
+ 
+/*Token Symbol in Input Group Div*/
+.token-symbol{
+  float: left;
+  padding: 5px;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/*Input of What Amount Section*/
+input{
+  height: 40px;
+  width: 96%;
+  background-color: transparent;
+  border: none;
+  font-size: 18px;
+}
+
+label{
+  font-size: 12px;
+  margin-top: 10px; 
+}
+
+.extra_info_and_swap_btn_grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.slippage{
+  grid-column: 3;
+  grid-row: 1;
+  margin-left: auto;
+}
+.network{
+  grid-column: 1;
+  grid-row: 1;
+  margin-right: auto;
+}
+
+/*Text Says Balance*/
+small {
+  display: flex;
+  
+}

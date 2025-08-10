@@ -1,0 +1,90 @@
+.pool-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 10px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.pool-card:hover {
+  transform: scale(1.05);
+}
+
+.pool-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.token-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+}
+
+.token-logo-img {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+  border-radius: 50%;
+}
+
+.pool-name {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #333;
+}
+
+.pool-info p {
+  font-size: 1em;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.view-pool-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.view-pool-button:hover {
+  background-color: #45a049;
+}
+
+.error {
+  color: red;
+  text-align: center;
+  padding: 10px;
+  font-weight: bold;
+  background-color: #fdd;
+  border-radius: 5px;
+}
+
+
+.token-icons {
+  display: flex;
+  gap: 10px;
+  margin: 5px 0;
+}
+
+.token-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background-color: white;
+  object-fit: contain;
+}
+
+.pool-metrics {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #555;
+}

@@ -1,0 +1,47 @@
+.token-list {
+    background: #1a1a1a;
+    color: #e0ffe0;
+    border: 1px solid #00ff88;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    max-width: 400px;
+    margin: 2rem auto;
+    box-shadow: 0 0 12px #00ff88aa;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  
+  .token-list h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #00ff88;
+  }
+  
+  .token-list ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .token-list li {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background-color: #222;
+    border-radius: 8px;
+  }
+  
+  .token-name {
+    font-weight: bold;
+  }
+  
+  .token-symbol {
+    color: #aaa;
+  }
+  
+  .loading {
+    text-align: center;
+    color: #00ff88;
+    font-size: 1.2rem;
+    margin-top: 2rem;
+  }
+  

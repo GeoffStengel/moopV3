@@ -1,11 +1,10 @@
-// deploy/UniswapV3Factory.js
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
 
 async function main() {
-  console.log("🛠️ Starting UniswapV3Factory deployment script...");
+  console.log("🛠️ Starting UniswapV3Factory deployment script... 🚀");
   console.log("🌐 Network:", hre.network.name);
 
   // Get deployer
@@ -14,69 +13,60 @@ async function main() {
   const balance = await ethers.provider.getBalance(deployer.address);
   console.log("💰 Deployer balance:", ethers.formatEther(balance), "ETH");
   if (balance < ethers.parseEther("0.1")) {
-    throw new Error("Insufficient deployer balance (< 0.1 ETH)");
+    throw new Error("Insufficient deployer balance (< 0.1 ETH) 😢");
   }
-
-  // Load library addresses
-  const librariesPath = path.resolve(__dirname, "../saveDeployArtifacts/libraries.json");
-  if (!fs.existsSync(librariesPath)) {
-    throw new Error("libraries.json not found. Deploy libraries first.");
-  }
-  const libraries = JSON.parse(fs.readFileSync(librariesPath));
-  console.log("📚 Libraries:", Object.keys(libraries));
 
   // Deploy UniswapV3Factory
-  console.log("📚 Loading UniswapV3Factory contract factory...");
-  const FactoryFactory = await ethers.getContractFactory("UniswapV3Factory", {
-    libraries: {
-      ChainId: libraries.ChainId, // Add other libraries if required
-    },
-  });
+  console.log("📚 Loading UniswapV3Factory contract factory... 🔧");
+  const FactoryFactory = await ethers.getContractFactory("contracts/uniswap/UniswapV3Factory.sol:UniswapV3Factory");
   console.log("🚀 Deploying UniswapV3Factory...");
-  const factory = await FactoryFactory.deploy();
+  const factory = await FactoryFactory.deploy({ gasLimit: 5000000 });
   await factory.waitForDeployment();
   const factoryAddress = await factory.getAddress();
   console.log("🎉 UniswapV3Factory deployed to:", factoryAddress);
 
-  // Enable fee tiers (e.g., 0.05%, 0.3%, 1%)
-  console.log("📚 Enabling fee tiers...");
-  await factory.enableFeeAmount(500, 10); // 0.05%
-  await factory.enableFeeAmount(3000, 60); // 0.3%
-  await factory.enableFeeAmount(10000, 200); // 1%
-  console.log("✅ Fee tiers enabled");
-
-  // Save address to artifacts
+  // Save address and ABI to artifacts
   const artifactDir = path.resolve(__dirname, "../saveDeployArtifacts");
-  const artifactPath = path.join(artifactDir, "factory.json");
-  console.log("💾 Saving factory address to:", artifactPath);
-
+  const artifactPath = path.join(artifactDir, "UniswapV3Factory.json");
+  console.log("💾 Saving UniswapV3Factory artifact to:", artifactPath);
   if (!fs.existsSync(artifactDir)) {
     fs.mkdirSync(artifactDir, { recursive: true });
     console.log("📂 Created directory:", artifactDir);
   }
+  const artifact = {
+    address: factoryAddress,
+    abi: FactoryFactory.interface.format("json"),
+  };
+  fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2));
+  console.log("✅ UniswapV3Factory artifact saved to hardhat 🎉");
 
-  console.log("📋 Directory contents before writing:", fs.readdirSync(artifactDir));
-  fs.writeFileSync(artifactPath, JSON.stringify({ factoryAddress }, null, 2));
-  console.log("✅ Factory address saved");
-  console.log("📋 Directory contents after writing:", fs.readdirSync(artifactDir));
+  // Copy to frontend/public/artifacts
+  const frontendArtifactDir = path.resolve(__dirname, "../../frontend/public/artifacts");
+  if (!fs.existsSync(frontendArtifactDir)) {
+    fs.mkdirSync(frontendArtifactDir, { recursive: true });
+    console.log("📂 Created frontend directory:", frontendArtifactDir);
+  }
+  const frontendArtifactPath = path.join(frontendArtifactDir, "UniswapV3Factory.json");
+  fs.copyFileSync(artifactPath, frontendArtifactPath);
+  console.log("✅ UniswapV3Factory artifact copied to:", frontendArtifactPath, "🎉");
 
   // Etherscan verification
   if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
     console.log("🔍 Verifying UniswapV3Factory on Etherscan...");
     try {
       await hre.run("verify:verify", { address: factoryAddress, constructorArguments: [] });
-      console.log("✅ UniswapV3Factory verified");
+      console.log("✅ UniswapV3Factory verified 🎉");
     } catch (err) {
       console.error("❌ Etherscan verification failed:", err.message);
     }
   }
 
-  return factoryAddress;
+  return artifact;
 }
 
 main()
   .then(() => {
-    console.log("🎉 UniswapV3Factory deployment completed successfully");
+    console.log("🎉 UniswapV3Factory deployment completed successfully 🥳");
     process.exit(0);
   })
   .catch((err) => {

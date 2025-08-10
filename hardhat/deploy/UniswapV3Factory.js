@@ -16,11 +16,15 @@ async function main() {
     throw new Error("Insufficient deployer balance (< 0.1 ETH) 😢");
   }
 
+  // Set feeTo address
+  const feeTo = "0xc4042DfAbF63F9d32849ca257b1EE1699a21a134"; // Your wallet for protocol fees
+  console.log("💸 Setting feeTo address:", feeTo);
+
   // Deploy UniswapV3Factory
   console.log("📚 Loading UniswapV3Factory contract factory... 🔧");
   const FactoryFactory = await ethers.getContractFactory("contracts/uniswap/UniswapV3Factory.sol:UniswapV3Factory");
-  console.log("🚀 Deploying UniswapV3Factory...");
-  const factory = await FactoryFactory.deploy({ gasLimit: 5000000 });
+  console.log("🚀 Deploying UniswapV3Factory with feeTo:", feeTo);
+  const factory = await FactoryFactory.deploy(feeTo, { gasLimit: 5000000 });
   await factory.waitForDeployment();
   const factoryAddress = await factory.getAddress();
   console.log("🎉 UniswapV3Factory deployed to:", factoryAddress);
@@ -54,7 +58,7 @@ async function main() {
   if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
     console.log("🔍 Verifying UniswapV3Factory on Etherscan...");
     try {
-      await hre.run("verify:verify", { address: factoryAddress, constructorArguments: [] });
+      await hre.run("verify:verify", { address: factoryAddress, constructorArguments: [feeTo] });
       console.log("✅ UniswapV3Factory verified 🎉");
     } catch (err) {
       console.error("❌ Etherscan verification failed:", err.message);

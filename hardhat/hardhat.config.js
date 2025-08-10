@@ -1,14 +1,14 @@
-const fs = require("fs");
-const path = require("path");
-
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-ethers");
 require("@nomicfoundation/hardhat-verify");
+require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
 
 task("compile", "Compiles the project and copies ABIs and artifacts")
   .setAction(async (taskArgs, hre, runSuper) => {
     await runSuper();
-    console.log("Copying ABIs to frontend/src/abis...");
+    console.log("📝 Copying ABIs to frontend/src/abis...");
     const contracts = [
       { name: "UniswapV3Factory", path: "uniswap/UniswapV3Factory.sol" },
       { name: "NonfungibleTokenPositionDescriptor", path: "uniswap/NonfungibleTokenPositionDescriptor.sol" },
@@ -19,7 +19,13 @@ task("compile", "Compiles the project and copies ABIs and artifacts")
       { name: "UniswapV3PoolDeployer", path: "uniswap/UniswapV3PoolDeployer.sol" },
       { name: "IERC20", path: "uniswap/interfaces/IERC20.sol" },
       { name: "NonfungiblePositionManager", path: "uniswap/NonfungiblePositionManager.sol" },
-      { name: "ChainId", path: "uniswap/libraries/ChainId.sol" }, // Updated path
+      { name: "TokenMinter", path: "minter_contracts/TokenMinter.sol" },
+      { name: "BasicToken", path: "minter_contracts/BasicToken.sol" },
+      { name: "MintableToken", path: "minter_contracts/ERC20TokenMintable.sol" },
+      { name: "MintableBurnableToken", path: "minter_contracts/ERC20TokenMintableBurnable.sol" },
+      { name: "PausableToken", path: "minter_contracts/ERC20Pausable.sol" },
+      { name: "AllFeaturesToken", path: "minter_contracts/ERC20TokenAllFeaturesToken.sol" },
+      { name: "ChainId", path: "uniswap/libraries/ChainId.sol" },
       { name: "TickMath", path: "uniswap/libraries/TickMath.sol" },
       { name: "SqrtPriceMath", path: "uniswap/libraries/SqrtPriceMath.sol" },
       { name: "FullMath", path: "uniswap/libraries/FullMath.sol" },
@@ -43,215 +49,37 @@ task("compile", "Compiles the project and copies ABIs and artifacts")
       if (fs.existsSync(artifactPath)) {
         const artifact = JSON.parse(fs.readFileSync(artifactPath));
         fs.writeFileSync(abiPath, JSON.stringify(artifact.abi, null, 2));
-        console.log(`Copied ABI for ${contract.name}`);
+        console.log(`📝 Copied ABI for ${contract.name}`);
       } else {
-        console.error(`Artifact for ${contract.name} not found at ${artifactPath}`);
+        console.error(`❌ Artifact for ${contract.name} not found at ${artifactPath}`);
       }
     }
 
     // Copy artifacts to frontend/public/artifacts
-    console.log("Copying artifacts to frontend/public/artifacts...");
+    console.log("📝 Copying artifacts to frontend/public/artifacts...");
     if (fs.existsSync(artifactsDir)) {
       fs.cpSync(artifactsDir, publicDir, { recursive: true });
-      console.log("Artifacts copied successfully");
+      console.log("✅ Artifacts copied successfully");
     } else {
-      console.error("Artifacts directory not found");
+      console.error("❌ Artifacts directory not found");
     }
   });
 
 module.exports = {
   solidity: {
-    compilers: [
-      {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
+    version: "0.7.6",
+    settings: {
+      evmVersion: "istanbul",
+      optimizer: { enabled: true, runs: 1000 },
+      metadata: { bytecodeHash: "none" },
+      outputSelection: {
+        "*": {
+          "*": ["*"],
+          "": ["ast"],
         },
       },
-      {
-        version: "0.8.0",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-    ],
-    overrides: {
-      "contracts/uniswap/NonfungibleTokenPositionDescriptor.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/NFTDescriptor.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-          outputSelection: {
-            "*": {
-              "*": ["*"],
-              "": ["ast"],
-            },
-          },
-          debug: {
-            revertStrings: "strip",
-          },
-        },
-      },
-      "contracts/WETH9.sol": {
-        version: "0.8.0",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/UniswapV3Factory.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-          outputSelection: {
-            "*": {
-              "*": ["*"],
-              "": ["ast"],
-            },
-          },
-          debug: {
-            revertStrings: "strip",
-          },
-        },
-      },
-      "contracts/uniswap/UniswapV3Pool.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-          outputSelection: {
-            "*": {
-              "*": ["*"],
-              "": ["ast"],
-            },
-          },
-          debug: {
-            revertStrings: "strip",
-          },
-        },
-      },
-      "contracts/uniswap/NonfungiblePositionManager.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-          outputSelection: {
-            "*": {
-              "*": ["*"],
-              "": ["ast"],
-            },
-          },
-          debug: {
-            revertStrings: "strip",
-          },
-        },
-      },
-      "contracts/uniswap/SwapRouter.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-          outputSelection: {
-            "*": {
-              "*": ["*"],
-              "": ["ast"],
-            },
-          },
-          debug: {
-            revertStrings: "strip",
-          },
-        },
-      },
-      "contracts/uniswap/libraries/ChainId.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/TickMath.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/SqrtPriceMath.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/FullMath.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/SwapMath.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/Tick.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/Position.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/Oracle.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
-      },
-      "contracts/uniswap/libraries/SVGUtils.sol": {
-        version: "0.7.6",
-        settings: {
-          evmVersion: "istanbul",
-          optimizer: { enabled: true, runs: 1000 },
-          metadata: { bytecodeHash: "none" },
-        },
+      debug: {
+        revertStrings: "strip",
       },
     },
   },
@@ -267,9 +95,14 @@ module.exports = {
       blockGasLimit: 12000000,
     },
     sepolia: {
-      url: "https://sepolia.infura.io/v3/ffa5449f44f34b01ab51c931e9687049",
+      url: process.env.SEPOLIA_URL || "https://sepolia.infura.io/v3/" + (process.env.VITE_INFURA_API_KEY || ""),
       accounts: [], // MetaMask handles signing
       chainId: 11155111,
+    },
+    mainnet: {
+      url: process.env.MAINNET_URL || "https://mainnet.infura.io/v3/" + (process.env.VITE_INFURA_API_KEY || ""),
+      accounts: [], // MetaMask handles signing
+      chainId: 1,
     },
   },
   paths: {
@@ -279,6 +112,6 @@ module.exports = {
     exclude: ["node_modules/base64-sol/**"],
   },
   etherscan: {
-    apiKey: "",
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
   },
 };

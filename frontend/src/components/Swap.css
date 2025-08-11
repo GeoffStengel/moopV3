@@ -1,7 +1,8 @@
 /* Swap.css */
 
 .swap-container {
-  max-width: 100%;
+  width: 100%;
+  min-width: 300px;
   margin: 0 auto;
   padding: 24px 20px 24px 20px;
   background: #1c1c1e; /*#1c1c1e*/

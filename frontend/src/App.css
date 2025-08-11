@@ -1,80 +1,113 @@
-:root {
-  --bg-color: #213547;
-  --text-color: #aaa;
-  --accent-color: #E86BD5;
-  --box-shadow: 0 0 15px rgba(0, 255, 163, 0.2);
+* {
+	margin: 0;
+	padding: 0;
+  box-sizing: border-box;
 }
-
-[data-theme='light'] {
-  --bg-color: #ff66c4;
-  --text-color: #333;
-  --accent-color: #ff66c4;
-  --box-shadow: 0 0 10px rgba(255, 102, 196, 0.2);
+html{
+  width: 100vw;
 }
-
-
-#root {
-  width: 100%;
-  display: grid;
+body {
+  width: 100vw;
+  background-color: #141414;
   margin: 0 auto;
-  padding: 10px;
-  text-align: center;
-  background-color: #6BAEE9;
+  justify-content: center;
+}
+
+.app_main_div {
+  display: grid;
+  min-width: 400px;
+  max-width: 450px;
+  min-height: 500px;
+  max-height: 100%;
+  grid-template-columns: 1fr;
+  grid-template-rows: 55px 25px 10px;
+  margin: 4px auto;
+  padding-left: 8px;
+  padding-right: 8px;
+  background: rgba(151, 194, 50, 0.9);
+  backdrop-filter: blur(6px);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   justify-items: center;
-  border-radius: 20px;
-  border: 4px solid #213547;
-  box-shadow: 0 0 15px rgba(0, 255, 163, 0.2);
+  align-items: center;
 }
 
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.app_main_div h1 {
+  font-size: 1.1rem;
+  margin: 8px;
+  text-align: center;
+  background: linear-gradient(90deg, #ff007a, #00d4ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 600;
+  position: absolute;
+  left: -100%;
+  
 }
 
-
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.emoji{
+  font-size: 1.3rem;
+  color: #000;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.wallet_info{
+  display: flex;
+  font-size: 12px;
+  margin: 0 auto;
+  padding: 2px;
 }
 
-.app_main_div{
-  width: 100%;
-  max-width: 700px;
-  text-align: 'center';
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
-.dropdown-toggle {
-  padding: 8px 12px;
-  background-color: #333;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
+nav {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+nav a,
+nav .dropdown-toggle {
+  padding: 4px 8px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #e0e0e0;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(34, 34, 34, 0.9);
+  backdrop-filter: blur(4px);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+nav .dropdown-toggle {
   cursor: pointer;
+}
+
+nav a:hover,
+nav .dropdown-toggle:hover {
+  background: linear-gradient(90deg, #ff007a, #00d4ff);
+  color: #ffffff;
 }
 
 .dropdown-menu {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  background: #222;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 0.5rem;
-  margin-top: 0.5rem;
+  background: rgba(34, 34, 34, 0.9);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 4px;
+  margin-top: 4px;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -82,32 +115,87 @@
 }
 
 .dropdown-menu button {
-  padding: 8px 10px;
+  padding: 4px 6px;
   background: transparent;
-  color: #fff;
+  color: #e0e0e0;
   border: none;
   text-align: left;
+  font-size: 0.65rem;
   cursor: pointer;
 }
 
 .dropdown-menu button:hover {
-  background: #333;
+  background: linear-gradient(90deg, #ff007a, #00d4ff);
+  color: #ffffff;
 }
 
+.quick_actions{
+  background-color: #ff007a;
+}
 
+.wallet-grid {
+  display: grid;
+  grid-template-columns: 1fr ;
+  grid-template-rows: auto;
+}
 
+.infura-status {
+  display: flex;
+  text-align: center;
+  font-size: 0.65rem;
+}
 
+.status-connected {
+  color: #2ecc71;
+}
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+.status-disconnected {
+  color: #e74c3c;
+}
+
+.connected_address {
+  display: flex;
+  font-size: 0.75rem;
+  color: #e0e0e0;
+  margin: 0 auto;
+  align-items: center;
+}
+
+.connect_btn {
+  display: flex;
+  justify-content: right;
+  width: 220px;
+  height: 30px;
+  font-size: 16px;
+  padding: 0px;
+}
+
+@media (max-width: 400px) {
+  .app_main_div {
+    margin: 2px;
+    padding: 4px;
   }
-}
 
-.card {
-  padding: 2em;
-}
+  .app_main_div h1 {
+    font-size: 1rem;
+  }
 
-.read-the-docs {
-  color: #888;
+  nav a,
+  nav .dropdown-toggle {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+  }
+
+  .dropdown-menu {
+    padding: 3px;
+  }
+
+  .dropdown-menu button {
+    padding: 3px 5px;
+    font-size: 0.6rem;
+  }
+
+  .infura-status {
+    font-size: 0.6rem;
+  }
 }

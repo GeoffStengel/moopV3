@@ -41,6 +41,7 @@
     let deployedAddresses = JSON.parse(localStorage.getItem('moopV3Artifacts')) || {};
     const SEPOLIA_WETH9 = '0xa904DA07A28BBa468497042f0b2D581487857971';
     const MAINNET_WETH9 = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+    const FEE_TO = '0xc4042DfAbF63F9d32849ca257b1EE1699a21a134';
 
     async function saveArtifacts() {
       try {
@@ -52,9 +53,9 @@
         a.download = `deployedArtifacts_${new Date().toISOString()}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        document.getElementById('output').innerText += `\nArtifacts saved to localStorage and downloaded as deployedArtifacts_${new Date().toISOString()}.json\n`;
+        document.getElementById('output').innerText += `\n📝 Artifacts saved to localStorage and downloaded as deployedArtifacts_${new Date().toISOString()}.json 🎉\n`;
       } catch (error) {
-        document.getElementById('output').innerText += `\nError saving artifacts: ${error.message}\n`;
+        document.getElementById('output').innerText += `\n❌ Error saving artifacts: ${error.message}\n`;
       }
     }
 
@@ -83,17 +84,17 @@
           method: 'wallet_switchEthereumChain',
           params: [{ chainId }],
         });
-        document.getElementById('output').innerText += `Switched to ${networkSelect === '1' ? 'Mainnet' : 'Sepolia'} network\n`;
+        document.getElementById('output').innerText += `🌐 Switched to ${networkSelect === '1' ? 'Mainnet' : 'Sepolia'} network 🎉\n`;
         document.getElementById('weth9Address').value = networkSelect === '11155111' ? SEPOLIA_WETH9 : MAINNET_WETH9;
       } catch (error) {
-        document.getElementById('output').innerText += `\nError switching network: ${error.message}\n`;
+        document.getElementById('output').innerText += `\n❌ Error switching network: ${error.message}\n`;
       }
     }
 
     async function checkWallet() {
       const output = document.getElementById('output');
       if (!window.ethereum) {
-        output.innerText = 'Please install MetaMask!';
+        output.innerText = '⚠️ Please install MetaMask!';
         throw new Error('MetaMask not installed');
       }
 
@@ -101,12 +102,12 @@
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const address = await signer.getAddress();
-      output.innerText += `Connected: ${address}\n`;
+      output.innerText += `👤 Connected: ${address}\n`;
 
       const balance = await provider.getBalance(address);
-      output.innerText += `Account balance: ${ethers.utils.formatEther(balance)} ETH\n`;
+      output.innerText += `💰 Account balance: ${ethers.utils.formatEther(balance)} ETH\n`;
       if (balance.isZero()) {
-        output.innerText += `Error: Account has 0 ETH. Please fund it with ${document.getElementById('networkSelect').value === '1' ? 'Mainnet' : 'Sepolia'} ETH.\n`;
+        output.innerText += `❌ Error: Account has 0 ETH. Please fund it with ${document.getElementById('networkSelect').value === '1' ? 'Mainnet' : 'Sepolia'} ETH.\n`;
         throw new Error('Account has 0 ETH');
       }
 
@@ -124,24 +125,24 @@
 
         for (const contractName of libraryContracts) {
           if (deployedAddresses[contractName]) {
-            output.innerText += `${contractName} already deployed at: ${deployedAddresses[contractName]}\n`;
+            output.innerText += `📚 ${contractName} already deployed at: ${deployedAddresses[contractName]} ✅\n`;
             continue;
           }
-          output.innerText += `Fetching artifact for ${contractName}...\n`;
+          output.innerText += `📚 Fetching artifact for ${contractName}... 🔎\n`;
           const artifact = await fetchArtifact(contractName, 'uniswap/libraries');
           const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, signer);
-          output.innerText += `Deploying ${contractName} library...\n`;
+          output.innerText += `🚀 Deploying ${contractName} library...\n`;
           const contract = await factory.deploy({ gasLimit: 5000000 });
           await contract.deployed();
-          output.innerText += `${contractName} deployed to: ${contract.address}\n`;
+          output.innerText += `🎉 ${contractName} deployed to: ${contract.address}\n`;
           deployedAddresses[contractName] = contract.address;
           deployedAddresses[`${contractName}_abi`] = artifact.abi;
           await saveArtifacts();
         }
-        output.innerText += '\nLibraries deployment complete!\n';
+        output.innerText += `\n🎉 Libraries deployment complete! 🥳\n`;
       } catch (error) {
         console.error(error);
-        output.innerText += `\nError: ${error.message}\n`;
+        output.innerText += `\n❌ Error: ${error.message}\n`;
       }
     }
 
@@ -149,23 +150,24 @@
       const output = document.getElementById('output');
       try {
         if (deployedAddresses.UniswapV3Factory) {
-          output.innerText += `UniswapV3Factory already deployed at: ${deployedAddresses.UniswapV3Factory}\n`;
+          output.innerText += `📚 UniswapV3Factory already deployed at: ${deployedAddresses.UniswapV3Factory} ✅\n`;
           return;
         }
         const { provider, signer } = await checkWallet();
-        output.innerText += `Fetching artifact for UniswapV3Factory...\n`;
+        const feeTo = FEE_TO;
+        output.innerText += `📚 Fetching artifact for UniswapV3Factory... 🔎\n`;
         const { abi, bytecode } = await fetchArtifact('UniswapV3Factory', 'uniswap');
         const factory = new ethers.ContractFactory(abi, bytecode, signer);
-        output.innerText += `Deploying UniswapV3Factory...\n`;
-        const contract = await factory.deploy({ gasLimit: 5000000 });
+        output.innerText += `🚀 Deploying UniswapV3Factory with feeTo: ${feeTo}...\n`;
+        const contract = await factory.deploy(feeTo, { gasLimit: 5000000 });
         await contract.deployed();
-        output.innerText += `UniswapV3Factory deployed to: ${contract.address}\n`;
+        output.innerText += `🎉 UniswapV3Factory deployed to: ${contract.address}\n`;
         deployedAddresses.UniswapV3Factory = contract.address;
         deployedAddresses.UniswapV3Factory_abi = abi;
         await saveArtifacts();
       } catch (error) {
         console.error(error);
-        output.innerText += `\nError: ${error.message}\n`;
+        output.innerText += `\n❌ Error: ${error.message}\n`;
       }
     }
 
@@ -173,23 +175,23 @@
       const output = document.getElementById('output');
       try {
         if (deployedAddresses.TokenMinter) {
-          output.innerText += `TokenMinter already deployed at: ${deployedAddresses.TokenMinter}\n`;
+          output.innerText += `📚 TokenMinter already deployed at: ${deployedAddresses.TokenMinter} ✅\n`;
           return;
         }
         const { provider, signer } = await checkWallet();
-        output.innerText += `Fetching artifact for TokenMinter...\n`;
+        output.innerText += `📚 Fetching artifact for TokenMinter... 🔎\n`;
         const { abi, bytecode } = await fetchArtifact('TokenMinter', '');
         const factory = new ethers.ContractFactory(abi, bytecode, signer);
-        output.innerText += `Deploying TokenMinter...\n`;
+        output.innerText += `🚀 Deploying TokenMinter...\n`;
         const contract = await factory.deploy({ gasLimit: 5000000 });
         await contract.deployed();
-        output.innerText += `TokenMinter deployed to: ${contract.address}\n`;
+        output.innerText += `🎉 TokenMinter deployed to: ${contract.address}\n`;
         deployedAddresses.TokenMinter = contract.address;
         deployedAddresses.TokenMinter_abi = abi;
         await saveArtifacts();
       } catch (error) {
         console.error(error);
-        output.innerText += `\nError: ${error.message}\n`;
+        output.innerText += `\n❌ Error: ${error.message}\n`;
       }
     }
 
@@ -197,23 +199,23 @@
       const output = document.getElementById('output');
       try {
         if (deployedAddresses.UniswapV3PoolDeployer) {
-          output.innerText += `UniswapV3PoolDeployer already deployed at: ${deployedAddresses.UniswapV3PoolDeployer}\n`;
+          output.innerText += `📚 UniswapV3PoolDeployer already deployed at: ${deployedAddresses.UniswapV3PoolDeployer} ✅\n`;
           return;
         }
         const { provider, signer } = await checkWallet();
-        output.innerText += `Fetching artifact for UniswapV3PoolDeployer...\n`;
+        output.innerText += `📚 Fetching artifact for UniswapV3PoolDeployer... 🔎\n`;
         const { abi, bytecode } = await fetchArtifact('UniswapV3PoolDeployer', 'uniswap');
         const factory = new ethers.ContractFactory(abi, bytecode, signer);
-        output.innerText += `Deploying UniswapV3PoolDeployer...\n`;
+        output.innerText += `🚀 Deploying UniswapV3PoolDeployer...\n`;
         const contract = await factory.deploy({ gasLimit: 5000000 });
         await contract.deployed();
-        output.innerText += `UniswapV3PoolDeployer deployed to: ${contract.address}\n`;
+        output.innerText += `🎉 UniswapV3PoolDeployer deployed to: ${contract.address}\n`;
         deployedAddresses.UniswapV3PoolDeployer = contract.address;
         deployedAddresses.UniswapV3PoolDeployer_abi = abi;
         await saveArtifacts();
       } catch (error) {
         console.error(error);
-        output.innerText += `\nError: ${error.message}\n`;
+        output.innerText += `\n❌ Error: ${error.message}\n`;
       }
     }
 
@@ -221,37 +223,37 @@
       const output = document.getElementById('output');
       try {
         if (deployedAddresses.NonfungibleTokenPositionDescriptor) {
-          output.innerText += `NonfungibleTokenPositionDescriptor already deployed at: ${deployedAddresses.NonfungibleTokenPositionDescriptor}\n`;
+          output.innerText += `📚 NonfungibleTokenPositionDescriptor already deployed at: ${deployedAddresses.NonfungibleTokenPositionDescriptor} ✅\n`;
           return;
         }
         const weth9Input = document.getElementById('weth9Address').value || (document.getElementById('networkSelect').value === '11155111' ? SEPOLIA_WETH9 : MAINNET_WETH9);
         if (!ethers.utils.isAddress(weth9Input)) {
-          output.innerText += `Error: Invalid WETH9 address provided.\n`;
+          output.innerText += `❌ Error: Invalid WETH9 address provided.\n`;
           return;
         }
         deployedAddresses.WETH9 = weth9Input;
         if (!deployedAddresses.NFTDescriptor) {
-          output.innerText += `Error: NFTDescriptor must be deployed first.\n`;
+          output.innerText += `❌ Error: NFTDescriptor must be deployed first.\n`;
           return;
         }
         const { provider, signer } = await checkWallet();
-        output.innerText += `Fetching artifact for NonfungibleTokenPositionDescriptor...\n`;
+        output.innerText += `📚 Fetching artifact for NonfungibleTokenPositionDescriptor... 🔎\n`;
         const { abi, bytecode } = await fetchArtifact('NonfungibleTokenPositionDescriptor', 'uniswap');
         const factory = new ethers.ContractFactory(abi, bytecode, signer);
-        output.innerText += `Deploying NonfungibleTokenPositionDescriptor...\n`;
+        output.innerText += `🚀 Deploying NonfungibleTokenPositionDescriptor...\n`;
         const contract = await factory.deploy(
           deployedAddresses.WETH9,
           deployedAddresses.NFTDescriptor,
           { gasLimit: 7000000 }
         );
         await contract.deployed();
-        output.innerText += `NonfungibleTokenPositionDescriptor deployed to: ${contract.address}\n`;
+        output.innerText += `🎉 NonfungibleTokenPositionDescriptor deployed to: ${contract.address}\n`;
         deployedAddresses.NonfungibleTokenPositionDescriptor = contract.address;
         deployedAddresses.NonfungibleTokenPositionDescriptor_abi = abi;
         await saveArtifacts();
       } catch (error) {
         console.error(error);
-        output.innerText += `\nError: ${error.message}\n`;
+        output.innerText += `\n❌ Error: ${error.message}\n`;
       }
     }
 
@@ -259,24 +261,24 @@
       const output = document.getElementById('output');
       try {
         if (deployedAddresses.NonfungiblePositionManager) {
-          output.innerText += `NonfungiblePositionManager already deployed at: ${deployedAddresses.NonfungiblePositionManager}\n`;
+          output.innerText += `📚 NonfungiblePositionManager already deployed at: ${deployedAddresses.NonfungiblePositionManager} ✅\n`;
           return;
         }
         const weth9Input = document.getElementById('weth9Address').value || (document.getElementById('networkSelect').value === '11155111' ? SEPOLIA_WETH9 : MAINNET_WETH9);
         if (!ethers.utils.isAddress(weth9Input)) {
-          output.innerText += `Error: Invalid WETH9 address provided.\n`;
+          output.innerText += `❌ Error: Invalid WETH9 address provided.\n`;
           return;
         }
         deployedAddresses.WETH9 = weth9Input;
         if (!deployedAddresses.UniswapV3Factory || !deployedAddresses.UniswapV3PoolDeployer || !deployedAddresses.NonfungibleTokenPositionDescriptor) {
-          output.innerText += `Error: UniswapV3Factory, UniswapV3PoolDeployer, and NonfungibleTokenPositionDescriptor must be deployed first.\n`;
+          output.innerText += `❌ Error: UniswapV3Factory, UniswapV3PoolDeployer, and NonfungibleTokenPositionDescriptor must be deployed first.\n`;
           return;
         }
         const { provider, signer } = await checkWallet();
-        output.innerText += `Fetching artifact for NonfungiblePositionManager...\n`;
+        output.innerText += `📚 Fetching artifact for NonfungiblePositionManager... 🔎\n`;
         const { abi, bytecode } = await fetchArtifact('NonfungiblePositionManager', 'uniswap');
         const factory = new ethers.ContractFactory(abi, bytecode, signer);
-        output.innerText += `Deploying NonfungiblePositionManager...\n`;
+        output.innerText += `🚀 Deploying NonfungiblePositionManager...\n`;
         const contract = await factory.deploy(
           deployedAddresses.UniswapV3Factory,
           deployedAddresses.UniswapV3PoolDeployer,
@@ -284,13 +286,13 @@
           { gasLimit: 7000000 }
         );
         await contract.deployed();
-        output.innerText += `NonfungiblePositionManager deployed to: ${contract.address}\n`;
+        output.innerText += `🎉 NonfungiblePositionManager deployed to: ${contract.address}\n`;
         deployedAddresses.NonfungiblePositionManager = contract.address;
         deployedAddresses.NonfungiblePositionManager_abi = abi;
         await saveArtifacts();
       } catch (error) {
         console.error(error);
-        output.innerText += `\nError: ${error.message}\n`;
+        output.innerText += `\n❌ Error: ${error.message}\n`;
       }
     }
 
@@ -298,37 +300,37 @@
       const output = document.getElementById('output');
       try {
         if (deployedAddresses.SwapRouter) {
-          output.innerText += `SwapRouter already deployed at: ${deployedAddresses.SwapRouter}\n`;
+          output.innerText += `📚 SwapRouter already deployed at: ${deployedAddresses.SwapRouter} ✅\n`;
           return;
         }
         const weth9Input = document.getElementById('weth9Address').value || (document.getElementById('networkSelect').value === '11155111' ? SEPOLIA_WETH9 : MAINNET_WETH9);
         if (!ethers.utils.isAddress(weth9Input)) {
-          output.innerText += `Error: Invalid WETH9 address provided.\n`;
+          output.innerText += `❌ Error: Invalid WETH9 address provided.\n`;
           return;
         }
         deployedAddresses.WETH9 = weth9Input;
         if (!deployedAddresses.UniswapV3Factory) {
-          output.innerText += `Error: UniswapV3Factory must be deployed first.\n`;
+          output.innerText += `❌ Error: UniswapV3Factory must be deployed first.\n`;
           return;
         }
         const { provider, signer } = await checkWallet();
-        output.innerText += `Fetching artifact for SwapRouter...\n`;
+        output.innerText += `📚 Fetching artifact for SwapRouter... 🔎\n`;
         const { abi, bytecode } = await fetchArtifact('SwapRouter', 'uniswap');
         const factory = new ethers.ContractFactory(abi, bytecode, signer);
-        output.innerText += `Deploying SwapRouter...\n`;
+        output.innerText += `🚀 Deploying SwapRouter...\n`;
         const contract = await factory.deploy(
           deployedAddresses.UniswapV3Factory,
           deployedAddresses.WETH9,
           { gasLimit: 5000000 }
         );
         await contract.deployed();
-        output.innerText += `SwapRouter deployed to: ${contract.address}\n`;
+        output.innerText += `🎉 SwapRouter deployed to: ${contract.address}\n`;
         deployedAddresses.SwapRouter = contract.address;
         deployedAddresses.SwapRouter_abi = abi;
         await saveArtifacts();
       } catch (error) {
         console.error(error);
-        output.innerText += `\nError: ${error.message}\n`;
+        output.innerText += `\n❌ Error: ${error.message}\n`;
       }
     }
   </script>

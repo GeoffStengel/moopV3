@@ -66,19 +66,21 @@ function App() {
     <Router>
       <div className="app_main_div">
         <a href='/'><h1><span className="emoji">🦉</span> MOOP SWAP</h1></a>
-        <ConnectWalletButton />
+        
 
         {/* Main Navigation */}
         <nav>
-          <Link to="/">Swap/</Link>
-          <Link to="/pools">Pools/</Link>
-          <Link to="/add-liquidity">Add Liquidity/</Link>
-          <Link to="/create-pool">Create Pool/</Link>
+          <Link to="/">Swap</Link>
+          <Link to="/pools">Pools</Link>
+          <Link to="/add-liquidity">Add Liquidity</Link>
+          <Link to="/create-pool">Create Pool</Link>
           <Link to="/TokenMinter">Mint Token</Link>
         </nav>
 
-        {/* Dropdown Quick Actions */}
-        <div style={{ position: 'relative', marginTop: '1rem', textAlign: 'center' }}>
+        <ConnectWalletButton />
+        
+        {/* Dropdown Quick Actions */} {/*
+        <div className="quick_actions" style={{ position: 'relative', marginTop: '1rem', textAlign: 'center' }}>
           <button onClick={toggleDropdown} className="dropdown-toggle">
             ⚙️ Quick Actions ▼
           </button>
@@ -88,12 +90,12 @@ function App() {
               <button onClick={() => { setShowAdd(true); setDropdownOpen(false); }}>💧 Add Liquidity (Modal)</button>
             </div>
           )}
-        </div>
+        </div>  */}
 
         {/* Infura Status */}
         <div className="infura-status">
           {blockNumber !== null ? (
-            <p style={{ color: 'lime' }}>🟢 Connected to Infura (Block {blockNumber})</p>
+            <p style={{ color: 'lime' }}>🟢 Connected (Block {blockNumber})</p>
           ) : (
             <p style={{ color: 'red' }}>🔴 Connecting to Infura...</p>
           )}
@@ -108,6 +110,7 @@ function App() {
           <Route path="/add-liquidity" element={<AddLiquidity />} />
         </Routes>
 
+        
         {/* Modals */}
           <Modal isOpen={showCreate} onClose={() => setShowCreate(false)}>
           <CreatePool

@@ -36,12 +36,12 @@ const ConnectWalletButton = () => {
   }, [isConnected, publicClient]);
 
   return (
-    <div style={{ marginTop: '1rem' }}>
-      <div  className="connect_btn"><ConnectButton /></div>
+    <div className="wallet-grid">
+      <div  className="connect_btn"><ConnectButton/></div>
       {isConnected && (
-        <div>
+        <div className='wallet_info'>
         {factoryOwner && <p>🧑‍💼 Factory Owner: {factoryOwner}</p>}
-        {isConnected && <p>🔗 Connected Address: {address}</p>}
+        {/*{isConnected && <p className="connected_address">🔗 Connected : {address}</p>} */}
         </div>
       )}
     </div>

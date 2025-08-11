@@ -11,32 +11,18 @@ contract TokenMinter is Ownable, ReentrancyGuard, Pausable {
     address public feeRecipient = 0xc4042DfAbF63F9d32849ca257b1EE1699a21a134;
     uint256 public mintFee = 0.001 ether;
     uint256 public constant MIN_MOOP_BALANCE = 1e18; // 1 MOOP
-    mapping(string => address) public tokenFactories; // Token type to factory address
     mapping(address => bool) public supportedTokens;
 
     event TokenCreated(address indexed creator, address tokenAddress, string name, string symbol, string tokenType);
     event TokenMinted(address indexed user, address tokenAddress, uint256 amount);
     event FeeRecipientUpdated(address oldRecipient, address newRecipient);
     event MintFeeUpdated(uint256 oldFee, uint256 newFee);
-    event TokenTypeAdded(string tokenType, address factory);
-    event TokenTypeRemoved(string tokenType);
 
     constructor() {
         supportedTokens[moopToken] = true;
     }
 
-    function addTokenType(string memory tokenType, address factory) external onlyOwner {
-        require(factory != address(0), "Invalid factory address");
-        tokenFactories[tokenType] = factory;
-        emit TokenTypeAdded(tokenType, factory);
-    }
-
-    function removeTokenType(string memory tokenType) external onlyOwner {
-        delete tokenFactories[tokenType];
-        emit TokenTypeRemoved(tokenType);
-    }
-
-    function createToken(string memory tokenType, string memory name, string memory symbol, uint256 initialSupply) 
+    function createToken(string memory tokenType, string memory name, string memory symbol, uint256 initialSupply, bytes memory bytecode) 
         external 
         payable 
         nonReentrant 
@@ -52,13 +38,16 @@ contract TokenMinter is Ownable, ReentrancyGuard, Pausable {
             payable(feeRecipient).transfer(mintFee);
         }
 
-        address factory = tokenFactories[tokenType];
-        require(factory != address(0), "Invalid token type");
-        (bool success, bytes memory result) = factory.call(
-            abi.encodeWithSignature("deploy(string,string,uint256)", name, symbol, initialSupply)
-        );
-        require(success, "Token creation failed");
-        address newToken = abi.decode(result, (address));
+        // Deploy token using provided bytecode
+        address newToken;
+        bytes memory constructorArgs = abi.encode(name, symbol, initialSupply);
+        bytes memory deploymentData = abi.encodePacked(bytecode, constructorArgs);
+        
+        assembly {
+            newToken := create(0, add(deploymentData, 0x20), mload(deploymentData))
+        }
+        require(newToken != address(0), "Token creation failed");
+
         supportedTokens[newToken] = true;
         emit TokenCreated(msg.sender, newToken, name, symbol, tokenType);
         return newToken;

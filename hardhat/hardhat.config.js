@@ -44,7 +44,7 @@ task("compile", "Compiles the project and copies ABIs and artifacts")
       fs.mkdirSync(srcDir, { recursive: true });
     }
     for (const contract of contracts) {
-      const artifactPath = path.join(artifactsDir, `${contract.path}/${contract.name}.json`);
+      const artifactPath = path.join(artifactsDir, contract.path, `${contract.name}.json`);
       const abiPath = path.join(srcDir, `${contract.name}.json`);
       if (fs.existsSync(artifactPath)) {
         const artifact = JSON.parse(fs.readFileSync(artifactPath));

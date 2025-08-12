@@ -2,20 +2,20 @@
 pragma solidity =0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-core/contracts/libraries/SafeCast.sol';
-import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import './libraries/SafeCast.sol';
+import './libraries/TickMath.sol';
+import './interfaces/IUniswapV3Pool.sol';
 
 import './interfaces/ISwapRouter.sol';
-import './base/PeripheryImmutableState.sol';
-import './base/PeripheryValidation.sol';
-import './base/PeripheryPaymentsWithFee.sol';
-import './base/Multicall.sol';
-import './base/SelfPermit.sol';
+import './libraries/PeripheryImmutableState.sol';
+import './libraries/PeripheryValidation.sol';
+import './libraries/PeripheryPaymentsWithFee.sol';
+import './libraries/Multicall.sol';
+import './libraries/SelfPermit.sol';
 import './libraries/Path.sol';
 import './libraries/PoolAddress.sol';
 import './libraries/CallbackValidation.sol';
-import './interfaces/external/IWETH9.sol';
+import './interfaces/IWETH9.sol';
 
 /// @title Uniswap V3 Swap Router
 /// @notice Router for stateless execution of swaps against Uniswap V3

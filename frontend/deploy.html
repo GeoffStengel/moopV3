@@ -61,7 +61,7 @@
 
     async function fetchArtifact(contractName, path = '') {
       try {
-        const url = path ? `/artifacts/contracts/${path}/${contractName}.sol/${contractName}.json` : `/artifacts/contracts/${contractName}.sol/${contractName}.json`;
+        const url = path ? `/artifacts/contracts/${path}/${contractName}.sol/${contractName}.json` : `/artifacts/contracts/minter_contracts/${contractName}.sol/${contractName}.json`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`Failed to fetch ${contractName} artifact: Status ${response.status}`);
@@ -120,7 +120,7 @@
         const { provider, signer } = await checkWallet();
         const libraryContracts = [
           'ChainId', 'TickMath', 'SqrtPriceMath', 'FullMath', 'SwapMath',
-          'Tick', 'Position', 'Oracle', 'SVGUtils', 'NFTDescriptor'
+          'Tick', 'Position', 'Oracle', 'HexStrings', 'SVGUtils'
         ];
 
         for (const contractName of libraryContracts) {
@@ -130,13 +130,24 @@
           }
           output.innerText += `📚 Fetching artifact for ${contractName}... 🔎\n`;
           const artifact = await fetchArtifact(contractName, 'uniswap/libraries');
-          const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, signer);
-          output.innerText += `🚀 Deploying ${contractName} library...\n`;
-          const contract = await factory.deploy({ gasLimit: 5000000 });
-          await contract.deployed();
-          output.innerText += `🎉 ${contractName} deployed to: ${contract.address}\n`;
-          deployedAddresses[contractName] = contract.address;
-          deployedAddresses[`${contractName}_abi`] = artifact.abi;
+          let factory;
+          if (contractName === 'SVGUtils') {
+            factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, signer).connect(signer);
+            output.innerText += `🚀 Deploying ${contractName} with HexStrings library at ${deployedAddresses.HexStrings}...\n`;
+            const contract = await factory.deploy(deployedAddresses.HexStrings, { gasLimit: 5000000 });
+            await contract.deployed();
+            output.innerText += `🎉 ${contractName} deployed to: ${contract.address}\n`;
+            deployedAddresses[contractName] = contract.address;
+            deployedAddresses[`${contractName}_abi`] = artifact.abi;
+          } else {
+            factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, signer);
+            output.innerText += `🚀 Deploying ${contractName} library...\n`;
+            const contract = await factory.deploy({ gasLimit: 5000000 });
+            await contract.deployed();
+            output.innerText += `🎉 ${contractName} deployed to: ${contract.address}\n`;
+            deployedAddresses[contractName] = contract.address;
+            deployedAddresses[`${contractName}_abi`] = artifact.abi;
+          }
           await saveArtifacts();
         }
         output.innerText += `\n🎉 Libraries deployment complete! 🥳\n`;
@@ -180,7 +191,7 @@
         }
         const { provider, signer } = await checkWallet();
         output.innerText += `📚 Fetching artifact for TokenMinter... 🔎\n`;
-        const { abi, bytecode } = await fetchArtifact('TokenMinter', '');
+        const { abi, bytecode } = await fetchArtifact('TokenMinter', 'minter_contracts');
         const factory = new ethers.ContractFactory(abi, bytecode, signer);
         output.innerText += `🚀 Deploying TokenMinter...\n`;
         const contract = await factory.deploy({ gasLimit: 5000000 });
@@ -243,7 +254,7 @@
         output.innerText += `🚀 Deploying NonfungibleTokenPositionDescriptor...\n`;
         const contract = await factory.deploy(
           deployedAddresses.WETH9,
-          deployedAddresses.NFTDescriptor,
+          ethers.utils.formatBytes32String("ETH"),
           { gasLimit: 7000000 }
         );
         await contract.deployed();

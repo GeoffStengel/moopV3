@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ethers } from 'ethers';
 import TokenMinterABI from '../abis/TokenMinter.json';
 import BasicTokenABI from '../abis/BasicToken.json';
@@ -8,8 +8,8 @@ import PausableTokenABI from '../abis/PausableToken.json';
 import AllFeaturesTokenABI from '../abis/AllFeaturesToken.json';
 import './TokenMinter.css';
 
-const TokenMinter = () => {
-  const [mode, setMode] = useState('Basic'); // Dropdown options: Basic, Mintable, MintableBurnable, Pausable, AllFeatures, MintExisting
+const TokenMinter = ({ isConnected, signer, connectWallet }) => {
+  const [mode, setMode] = useState('Basic');
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [supply, setSupply] = useState('');
@@ -18,13 +18,19 @@ const TokenMinter = () => {
   const [mintAmount, setMintAmount] = useState('');
   const [mintTokenAddress, setMintTokenAddress] = useState('');
   const [estimatedGas, setEstimatedGas] = useState(null);
-  const moopTokenAddress = '0x3091cd5408F5841681774f7fD6222481ccE7Fe69'; // Sepolia
-  const tokenMinterAddress = 'YOUR_TOKEN_MINTER_ADDRESS'; // Replace with deployed address
+  const [isLoading, setIsLoading] = useState(false);
+  const moopTokenAddress = import.meta.env.VITE_MOOP_TOKEN_ADDRESS || '0x3091cd5408F5841681774f7fD6222481ccE7Fe69';
+  const tokenMinterAddress = import.meta.env.VITE_TOKEN_MINTER_ADDRESS || '0xYourDeployedAddress';
 
   const isCreateMode = () => mode !== 'MintExisting';
-  const isFormValid = () => isCreateMode() ? name.trim() && symbol.trim() && supply && parseFloat(supply) > 0 : mintTokenAddress && mintAmount && parseFloat(mintAmount) > 0;
+  const isFormValid = useCallback(() => {
+    if (isCreateMode()) {
+      return name.trim() && symbol.trim() && supply && parseFloat(supply) > 0;
+    }
+    return ethers.isAddress(mintTokenAddress) && mintAmount && parseFloat(mintAmount) > 0;
+  }, [mode, name, symbol, supply, mintTokenAddress, mintAmount]);
 
-  const getTokenTypeAndBytecode = () => {
+  const getTokenTypeAndBytecode = useCallback(() => {
     switch (mode) {
       case 'Mintable': return { type: 'Mintable', bytecode: MintableTokenABI.bytecode };
       case 'MintableBurnable': return { type: 'MintableBurnable', bytecode: MintableBurnableTokenABI.bytecode };
@@ -32,50 +38,66 @@ const TokenMinter = () => {
       case 'AllFeatures': return { type: 'AllFeatures', bytecode: AllFeaturesTokenABI.bytecode };
       default: return { type: 'Basic', bytecode: BasicTokenABI.bytecode };
     }
-  };
+  }, [mode]);
+
+  useEffect(() => {
+    if (!isConnected || !signer) {
+      setStatus('❌ Please connect wallet via the top button');
+    } else {
+      setStatus('');
+    }
+  }, [isConnected, signer]);
 
   const deployToken = async () => {
+    if (!isFormValid() || !isConnected || !signer) {
+      if (!isConnected || !signer) {
+        connectWallet();
+        setStatus('❌ Please connect wallet via the top button');
+      }
+      return;
+    }
+    setIsLoading(true);
+    let contract;
     try {
       setStatus('🛠 Deploying...');
-      if (!window.ethereum) throw new Error("MetaMask not found");
-
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const address = await signer.getAddress();
+      const { chainId } = await provider.getNetwork();
+      if (chainId !== 11155111n) {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }]
+        });
+        throw new Error('Switched to Sepolia, please retry');
+      }
 
-      // Check MOOP balance
+      contract = new ethers.Contract(tokenMinterAddress, TokenMinterABI.abi, signer);
+      const address = await signer.getAddress();
       let free = false;
       try {
-        const moop = new ethers.Contract(moopTokenAddress, [
-          'function balanceOf(address owner) view returns (uint256)',
-        ], provider);
+        const moop = new ethers.Contract(moopTokenAddress, ['function balanceOf(address) view returns (uint256)'], provider);
         const moopBalance = await moop.balanceOf(address);
         free = ethers.formatUnits(moopBalance, 18) >= 1;
       } catch (err) {
-        console.warn("Could not check MOOP balance", err);
+        console.warn('Could not check MOOP balance:', err);
       }
 
-      const tokenMinter = new ethers.Contract(tokenMinterAddress, TokenMinterABI.abi, signer);
       const supplyParsed = ethers.parseUnits(supply || '0', 18);
       const { type, bytecode } = getTokenTypeAndBytecode();
-
-      const tx = await tokenMinter.createToken(
-        type,
-        name,
-        symbol,
-        supplyParsed,
-        bytecode,
-        { value: free ? 0 : ethers.parseEther("0.001") }
-      );
+      const tx = await contract.createToken(type, name, symbol, supplyParsed, bytecode, {
+        value: free ? 0n : ethers.parseEther('0.001')
+      });
       setStatus('⏳ Waiting for confirmation...');
       const receipt = await tx.wait();
-      const deployedAddress = receipt.events.find(e => e.event === 'TokenCreated').args.tokenAddress;
+      const event = receipt.logs
+        .map(log => contract.interface.parseLog(log))
+        .find(e => e?.name === 'TokenCreated');
+      if (!event) throw new Error('TokenCreated event not found');
+      const deployedAddress = event.args.tokenAddress;
       setContractAddress(deployedAddress);
       setStatus('✅ Token deployed successfully!');
-      setMode('MintExisting'); // Switch to mint mode
-      setMintTokenAddress(deployedAddress); // Pre-fill mint address
+      setMode('MintExisting');
+      setMintTokenAddress(deployedAddress);
 
-      // Add to MetaMask
       try {
         await window.ethereum.request({
           method: 'wallet_watchAsset',
@@ -85,83 +107,125 @@ const TokenMinter = () => {
               address: deployedAddress,
               symbol: symbol,
               decimals: 18,
-              image: '',
-            },
-          },
+              image: 'https://your-token-logo.png'
+            }
+          }
         });
       } catch (err) {
-        console.warn("Could not add token to MetaMask", err);
+        console.warn('Could not add token to MetaMask:', err);
       }
     } catch (err) {
-      console.error(err);
-      setStatus(`❌ Error: ${err.message}`);
+      const reason = err.reason || (contract ? contract.interface.parseError(err.data)?.name : null) || err.message;
+      setStatus(`❌ Error: ${reason}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const mintToken = async () => {
+    if (!isFormValid() || !isConnected || !signer) {
+      if (!isConnected || !signer) {
+        connectWallet();
+        setStatus('❌ Please connect wallet via the top button');
+      }
+      return;
+    }
+    setIsLoading(true);
+    let contract;
     try {
       setStatus('🛠 Minting...');
-      if (!window.ethereum) throw new Error("MetaMask not found");
-
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const address = await signer.getAddress();
+      const { chainId } = await provider.getNetwork();
+      if (chainId !== 11155111n) {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }]
+        });
+        throw new Error('Switched to Sepolia, please retry');
+      }
 
+      contract = new ethers.Contract(tokenMinterAddress, TokenMinterABI.abi, signer);
+      const address = await signer.getAddress();
       let free = false;
       try {
-        const moop = new ethers.Contract(moopTokenAddress, [
-          'function balanceOf(address owner) view returns (uint256)',
-        ], provider);
+        const moop = new ethers.Contract(moopTokenAddress, ['function balanceOf(address) view returns (uint256)'], provider);
         const moopBalance = await moop.balanceOf(address);
         free = ethers.formatUnits(moopBalance, 18) >= 1;
       } catch (err) {
-        console.warn("Could not check MOOP balance", err);
+        console.warn('Could not check MOOP balance:', err);
       }
 
-      const tokenMinter = new ethers.Contract(tokenMinterAddress, TokenMinterABI.abi, signer);
       const amountParsed = ethers.parseUnits(mintAmount || '0', 18);
-
-      const tx = await tokenMinter.mintExistingToken(
-        mintTokenAddress,
-        amountParsed,
-        { value: free ? 0 : ethers.parseEther("0.001") }
-      );
+      const tx = await contract.mintExistingToken(mintTokenAddress, amountParsed, {
+        value: free ? 0n : ethers.parseEther('0.001')
+      });
       setStatus('⏳ Waiting for confirmation...');
       await tx.wait();
       setStatus('✅ Tokens minted successfully!');
     } catch (err) {
-      console.error(err);
-      setStatus(`❌ Error: ${err.message}`);
+      const reason = err.reason || (contract ? contract.interface.parseError(err.data)?.name : null) || err.message;
+      setStatus(`❌ Error: ${reason}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const estimateDeploymentGas = async () => {
+    if (!isFormValid() || !isConnected || !signer) {
+      if (!isConnected || !signer) {
+        connectWallet();
+        setStatus('❌ Please connect wallet via the top button');
+      }
+      return;
+    }
+    setIsLoading(true);
+    let contract;
     try {
-      if (!window.ethereum) throw new Error("MetaMask not found");
-
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const { chainId } = await provider.getNetwork();
+      if (chainId !== 11155111n) {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }]
+        });
+        throw new Error('Switched to Sepolia, please retry');
+      }
 
-      const tokenMinter = new ethers.Contract(tokenMinterAddress, TokenMinterABI.abi, signer);
+      contract = new ethers.Contract(tokenMinterAddress, TokenMinterABI.abi, signer);
+      const address = await signer.getAddress();
+      let free = false;
+      try {
+        const moop = new ethers.Contract(moopTokenAddress, ['function balanceOf(address) view returns (uint256)'], provider);
+        const moopBalance = await moop.balanceOf(address);
+        free = ethers.formatUnits(moopBalance, 18) >= 1;
+      } catch (err) {
+        console.warn('Could not check MOOP balance:', err);
+      }
+
       const supplyParsed = ethers.parseUnits(supply || '0', 18);
       const { type, bytecode } = getTokenTypeAndBytecode();
-
-      const estimate = await tokenMinter.estimateGas.createToken(type, name, symbol, supplyParsed, bytecode);
-      const fee = ethers.formatEther(estimate * BigInt(10000000000)); // 10 gwei
+      const estimate = await contract.estimateGas.createToken(type, name, symbol, supplyParsed, bytecode, {
+        value: free ? 0n : ethers.parseEther('0.001')
+      });
+      const gasPrice = await provider.getFeeData().gasPrice;
+      const fee = ethers.formatEther(estimate * (gasPrice || 10n**9n));
       setEstimatedGas(fee);
       setStatus(`💸 Estimated gas: ~${fee} ETH`);
     } catch (err) {
-      console.error('Gas estimate error:', err);
-      setStatus('❌ Could not estimate gas');
+      const reason = err.reason || (contract ? contract.interface.parseError(err.data)?.name : null) || err.message;
+      setStatus(`❌ Error: ${reason}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="swap-container">
       <h2>🪄 Token Minter</h2>
+      {!isConnected && <p className="swap-result error">Please connect wallet via the top button</p>}
       <div className="token-section">
         <label>Action</label>
-        <select value={mode} onChange={e => setMode(e.target.value)}>
+        <select value={mode} onChange={e => setMode(e.target.value)} disabled={isLoading || !isConnected}>
           <option value="Basic">Basic Token</option>
           <option value="Mintable">Mintable Token</option>
           <option value="MintableBurnable">Mintable & Burnable Token</option>
@@ -172,24 +236,65 @@ const TokenMinter = () => {
         {isCreateMode() ? (
           <>
             <label>Token Name</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="MyToken" />
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value.slice(0, 32))}
+              placeholder="MyToken"
+              disabled={isLoading || !isConnected}
+              aria-label="Token Name"
+            />
             <label>Symbol</label>
-            <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="MTK" />
+            <input
+              type="text"
+              value={symbol}
+              onChange={e => setSymbol(e.target.value.slice(0, 10))}
+              placeholder="MTK"
+              disabled={isLoading || !isConnected}
+              aria-label="Token Symbol"
+            />
             <label>Total Supply</label>
-            <input type="number" value={supply} onChange={e => setSupply(e.target.value)} placeholder="1000000" />
+            <input
+              type="number"
+              value={supply}
+              onChange={e => setSupply(e.target.value)}
+              placeholder="1000000"
+              disabled={isLoading || !isConnected}
+              aria-label="Total Supply"
+            />
             <div className="swap-button-wrapper">
-              <button onClick={deployToken} disabled={!isFormValid()}>🚀 Deploy Token</button>
-              <button onClick={estimateDeploymentGas} disabled={!isFormValid()}>⛽ Estimate Gas</button>
+              <button onClick={deployToken} disabled={!isFormValid() || isLoading || !isConnected}>
+                🚀 {isLoading ? 'Deploying...' : 'Deploy Token'}
+              </button>
+              <button onClick={estimateDeploymentGas} disabled={!isFormValid() || isLoading || !isConnected}>
+                ⛽ {isLoading ? 'Estimating...' : 'Estimate Gas'}
+              </button>
             </div>
           </>
         ) : (
           <>
             <label>Token Address</label>
-            <input type="text" value={mintTokenAddress} onChange={e => setMintTokenAddress(e.target.value)} placeholder="0x..." />
+            <input
+              type="text"
+              value={mintTokenAddress}
+              onChange={e => setMintTokenAddress(e.target.value)}
+              placeholder="0x..."
+              disabled={isLoading || !isConnected}
+              aria-label="Token Address"
+            />
             <label>Amount to Mint</label>
-            <input type="number" value={mintAmount} onChange={e => setMintAmount(e.target.value)} placeholder="1000" />
+            <input
+              type="number"
+              value={mintAmount}
+              onChange={e => setMintAmount(e.target.value)}
+              placeholder="1000"
+              disabled={isLoading || !isConnected}
+              aria-label="Amount to Mint"
+            />
             <div className="swap-button-wrapper">
-              <button onClick={mintToken} disabled={!isFormValid()}>🪙 Mint Tokens</button>
+              <button onClick={mintToken} disabled={!isFormValid() || isLoading || !isConnected}>
+                🪙 {isLoading ? 'Minting...' : 'Mint Tokens'}
+              </button>
             </div>
           </>
         )}

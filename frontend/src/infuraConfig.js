@@ -1,4 +1,4 @@
-// test2_swap/hardhat/frontend/src/infuraConfig.js
+// moop-dapp/hardhat/frontend/src/infuraConfig.js
 //import { ethers } from 'ethers';
 //
 //export const INFURA_PROJECT_ID = "ffa5449f44f34b01ab51c931e9687049";

@@ -7,7 +7,9 @@ const path = require("path");
 
 task("compile", "Compiles the project and copies ABIs and artifacts")
   .setAction(async (taskArgs, hre, runSuper) => {
+    // run the built-in compile task
     await runSuper();
+
     console.log("📝 Copying ABIs to frontend/src/abis...");
     const contracts = [
       { name: "UniswapV3Factory", path: "uniswap/UniswapV3Factory.sol" },
@@ -35,14 +37,15 @@ task("compile", "Compiles the project and copies ABIs and artifacts")
       { name: "Oracle", path: "uniswap/libraries/Oracle.sol" },
       { name: "SVGUtils", path: "uniswap/libraries/SVGUtils.sol" },
     ];
+
     const srcDir = path.join(__dirname, "../frontend/src/abis");
     const artifactsDir = path.join(__dirname, "artifacts/contracts");
     const publicDir = path.join(__dirname, "../frontend/public/artifacts");
 
-    // Copy ABIs to frontend/src/abis
     if (!fs.existsSync(srcDir)) {
       fs.mkdirSync(srcDir, { recursive: true });
     }
+
     for (const contract of contracts) {
       const artifactPath = path.join(artifactsDir, contract.path, `${contract.name}.json`);
       const abiPath = path.join(srcDir, `${contract.name}.json`);
@@ -55,10 +58,10 @@ task("compile", "Compiles the project and copies ABIs and artifacts")
       }
     }
 
-    // Copy artifacts to frontend/public/artifacts
+    // Copy the entire artifacts folder into frontend/public/artifacts for easier debug & frontend access.
     console.log("📝 Copying artifacts to frontend/public/artifacts...");
-    if (fs.existsSync(artifactsDir)) {
-      fs.cpSync(artifactsDir, publicDir, { recursive: true });
+    if (fs.existsSync(path.join(__dirname, "artifacts"))) {
+      fs.cpSync(path.join(__dirname, "artifacts"), publicDir, { recursive: true });
       console.log("✅ Artifacts copied successfully");
     } else {
       console.error("❌ Artifacts directory not found");
@@ -95,13 +98,17 @@ module.exports = {
       blockGasLimit: 12000000,
     },
     sepolia: {
-      url: process.env.SEPOLIA_URL || "https://sepolia.infura.io/v3/" + (process.env.VITE_INFURA_API_KEY || ""),
-      accounts: [], // MetaMask handles signing
+      // prefer VITE_INFURA_API_KEY in env; fallback string left empty if not set
+      url: process.env.SEPOLIA_URL || `https://sepolia.infura.io/v3/${process.env.VITE_INFURA_API_KEY || ""}`,
+      // No private key supplied here (MetaMask/browser signing assumed).
+      // If you want to deploy from the CLI, set DEPLOYER_KEY in .env and uncomment:
+      // accounts: process.env.DEPLOYER_KEY ? [process.env.DEPLOYER_KEY] : [],
+      accounts: [],
       chainId: 11155111,
     },
     mainnet: {
-      url: process.env.MAINNET_URL || "https://mainnet.infura.io/v3/" + (process.env.VITE_INFURA_API_KEY || ""),
-      accounts: [], // MetaMask handles signing
+      url: process.env.MAINNET_URL || `https://mainnet.infura.io/v3/${process.env.VITE_INFURA_API_KEY || ""}`,
+      accounts: [],
       chainId: 1,
     },
   },
@@ -113,5 +120,11 @@ module.exports = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY || "",
+  },
+  // Optional helper: gas reporter (enable via env)
+  gasReporter: {
+    enabled: process.env.REPORT_GAS === "true" || false,
+    currency: "USD",
+    coinmarketcap: process.env.CMC_API_KEY || "",
   },
 };

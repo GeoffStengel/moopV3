@@ -1,20 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
-import { JsonRpcProvider } from 'ethers';
+// frontend/src/App.jsx
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
+import { ethers } from "ethers";
 
-import ConnectWalletButton from './components/ConnectWalletButton';
-import Swap from './components/Swap';
-import Pools from './components/Pools';
-import CreatePool from './components/CreatePool';
-import AddLiquidity from './components/AddLiquidity';
-import Modal from './components/modal';
-import { RPC_URL, provider } from './infuraConfig';
-import './App.css';
-
-import { ethers } from 'ethers';
-import TokenMinter from './components/TokenMinter';
-
-
+import ConnectWalletButton from "./components/ConnectWalletButton";
+import Swap from "./components/Swap";
+import Pools from "./components/Pools";
+import CreatePool from "./components/CreatePool";
+import AddLiquidity from "./components/AddLiquidity";
+import Modal from "./components/modal";
+import { RPC_URL } from "./infuraConfig";
+import "./App.css";
+import TokenMinter from "./components/TokenMinter";
 
 function App() {
   const [blockNumber, setBlockNumber] = useState(null);
@@ -25,33 +22,33 @@ function App() {
   const [signer, setSigner] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Handle wallet connection globally
+  // Handle wallet connection globally using BrowserProvider (ethers v6)
   const connectWallet = async () => {
     if (window.ethereum) {
       try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
-        setSigner(signer);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const browserProvider = new ethers.BrowserProvider(window.ethereum);
+        const s = await browserProvider.getSigner();
+        setSigner(s);
         setIsConnected(true);
       } catch (err) {
-        console.error('Wallet connection failed:', err);
+        console.error("Wallet connection failed:", err);
       }
+    } else {
+      console.warn("No injected wallet detected (window.ethereum)");
     }
   };
 
-
-
   useEffect(() => {
-    const provider = new JsonRpcProvider(RPC_URL);
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
 
     const fetchBlock = async () => {
       try {
         const latestBlock = await provider.getBlockNumber();
         setBlockNumber(latestBlock);
-        console.log('Connected to Infura. Latest block:', latestBlock);
+        console.log("Connected to Infura. Latest block:", latestBlock);
       } catch (err) {
-        console.error('Error connecting to Infura:', err);
+        console.error("Error connecting to Infura:", err);
       }
     };
 
@@ -65,10 +62,12 @@ function App() {
   return (
     <Router>
       <div className="app_main_div">
-        <a href='/'><h1><span className="emoji">🦉</span> MOOP SWAP</h1></a>
-        
+        <a href="/">
+          <h1>
+            <span className="emoji">🦉</span> MOOP SWAP
+          </h1>
+        </a>
 
-        {/* Main Navigation */}
         <nav>
           <Link to="/">Swap</Link>
           <Link to="/pools">Pools</Link>
@@ -77,49 +76,31 @@ function App() {
           <Link to="/TokenMinter">Mint Token</Link>
         </nav>
 
-        <ConnectWalletButton />
-        
-        {/* Dropdown Quick Actions */} {/*
-        <div className="quick_actions" style={{ position: 'relative', marginTop: '1rem', textAlign: 'center' }}>
-          <button onClick={toggleDropdown} className="dropdown-toggle">
-            ⚙️ Quick Actions ▼
-          </button>
-          {dropdownOpen && (
-            <div className="dropdown-menu">
-              <button onClick={() => { setShowCreate(true); setDropdownOpen(false); }}>➕ Create Pool (Modal)</button>
-              <button onClick={() => { setShowAdd(true); setDropdownOpen(false); }}>💧 Add Liquidity (Modal)</button>
-            </div>
-          )}
-        </div>  */}
+        <ConnectWalletButton connectWallet={connectWallet} />
 
-        {/* Infura Status */}
         <div className="infura-status">
           {blockNumber !== null ? (
-            <p style={{ color: 'lime' }}>🟢 Connected (Block {blockNumber})</p>
+            <p style={{ color: "lime" }}>🟢 Connected to Infura (Block {blockNumber})</p>
           ) : (
-            <p style={{ color: 'red' }}>🔴 Connecting to Infura...</p>
+            <p style={{ color: "red" }}>🔴 Connecting to Infura...</p>
           )}
         </div>
 
-        {/* Routes */}
         <Routes>
           <Route path="/" element={<Swap />} />
           <Route path="/pools" element={<Pools />} />
-          <Route path="/create-pool" element={<CreatePool signer={signer} isConnected={isConnected} connectWallet={connectWallet} />} />
+          <Route
+            path="/create-pool"
+            element={<CreatePool signer={signer} isConnected={isConnected} connectWallet={connectWallet} />}
+          />
           <Route path="/TokenMinter" element={<TokenMinter />} />
           <Route path="/add-liquidity" element={<AddLiquidity />} />
         </Routes>
 
-        
-        {/* Modals */}
-          <Modal isOpen={showCreate} onClose={() => setShowCreate(false)}>
-          <CreatePool
-            signer={signer}
-            isConnected={isConnected}
-            connectWallet={connectWallet}
-          />
-          </Modal>
-        
+        <Modal isOpen={showCreate} onClose={() => setShowCreate(false)}>
+          <CreatePool signer={signer} isConnected={isConnected} connectWallet={connectWallet} />
+        </Modal>
+
         <Modal isOpen={showAdd} onClose={() => setShowAdd(false)}>
           <AddLiquidity />
         </Modal>

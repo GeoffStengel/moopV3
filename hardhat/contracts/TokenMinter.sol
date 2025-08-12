@@ -6,9 +6,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
+interface IMintable {
+    function mint(address to, uint256 amount) external;
+}
+
 contract TokenMinter is Ownable, ReentrancyGuard, Pausable {
-    address public constant moopToken = 0x75965BE2a4C8bA0E9003A512c1914B71e4101EF0; // Mainnet
-    address public feeRecipient = 0xc4042DfAbF63F9d32849ca257b1EE1699a21a134;
+    address public immutable moopToken; // Dynamic, set in constructor
+    address public feeRecipient;
     uint256 public mintFee = 0.001 ether;
     uint256 public constant MIN_MOOP_BALANCE = 1e18; // 1 MOOP
     mapping(address => bool) public supportedTokens;
@@ -18,8 +22,12 @@ contract TokenMinter is Ownable, ReentrancyGuard, Pausable {
     event FeeRecipientUpdated(address oldRecipient, address newRecipient);
     event MintFeeUpdated(uint256 oldFee, uint256 newFee);
 
-    constructor() {
-        supportedTokens[moopToken] = true;
+    constructor(address _moopToken, address _feeRecipient) {
+        require(_moopToken != address(0), "Invalid MOOP token address");
+        require(_feeRecipient != address(0), "Invalid fee recipient");
+        moopToken = _moopToken;
+        feeRecipient = _feeRecipient;
+        supportedTokens[_moopToken] = true;
     }
 
     function createToken(string memory tokenType, string memory name, string memory symbol, uint256 initialSupply, bytes memory bytecode) 
@@ -29,16 +37,23 @@ contract TokenMinter is Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
         returns (address) 
     {
+        require(bytes(name).length > 0, "Name cannot be empty");
+        require(bytes(symbol).length > 0, "Symbol cannot be empty");
+        require(initialSupply > 0, "Initial supply must be greater than zero");
+        require(bytecode.length > 0 && bytecode.length <= 24576, "Invalid bytecode size");
+
         bool isMoopHolder = IERC20(moopToken).balanceOf(msg.sender) >= MIN_MOOP_BALANCE;
         if (!isMoopHolder) {
             require(msg.value >= mintFee, "Insufficient fee: 0.001 ETH required");
-            if (msg.value > mintFee) {
-                payable(msg.sender).transfer(msg.value - mintFee);
+            uint256 excess = msg.value - mintFee;
+            if (excess > 0) {
+                (bool refundSuccess, ) = payable(msg.sender).call{value: excess}("");
+                require(refundSuccess, "Refund failed");
             }
-            payable(feeRecipient).transfer(mintFee);
+            (bool feeSuccess, ) = payable(feeRecipient).call{value: mintFee}("");
+            require(feeSuccess, "Fee transfer failed");
         }
 
-        // Deploy token using provided bytecode
         address newToken;
         bytes memory constructorArgs = abi.encode(name, symbol, initialSupply);
         bytes memory deploymentData = abi.encodePacked(bytecode, constructorArgs);
@@ -60,13 +75,18 @@ contract TokenMinter is Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
     {
         require(supportedTokens[token], "Token not supported");
+        require(amount > 0, "Amount must be greater than zero");
+
         bool isMoopHolder = IERC20(moopToken).balanceOf(msg.sender) >= MIN_MOOP_BALANCE;
         if (!isMoopHolder) {
             require(msg.value >= mintFee, "Insufficient fee: 0.001 ETH required");
-            if (msg.value > mintFee) {
-                payable(msg.sender).transfer(msg.value - mintFee);
+            uint256 excess = msg.value - mintFee;
+            if (excess > 0) {
+                (bool refundSuccess, ) = payable(msg.sender).call{value: excess}("");
+                require(refundSuccess, "Refund failed");
             }
-            payable(feeRecipient).transfer(mintFee);
+            (bool feeSuccess, ) = payable(feeRecipient).call{value: mintFee}("");
+            require(feeSuccess, "Fee transfer failed");
         }
 
         uint256 codeSize;
@@ -74,6 +94,7 @@ contract TokenMinter is Ownable, ReentrancyGuard, Pausable {
             codeSize := extcodesize(token)
         }
         require(codeSize > 0, "Token not a contract");
+        
         (bool success, ) = token.call(abi.encodeWithSignature("mint(address,uint256)", msg.sender, amount));
         require(success, "Minting failed");
         emit TokenMinted(msg.sender, token, amount);

@@ -1,12 +1,10 @@
+// contracts/uniswap/NonfungibleTokenPositionDescriptor.sol
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity =0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@uniswap/lib/contracts/libraries/SafeERC20Namer.sol';
-//import "@uniswap/v3-periphery/contracts/libraries/Base64.sol";
-import "./libraries/base64.sol";
-
+import './libraries/SafeERC20Namer.sol';
+import './libraries/Base64.sol';
 import './libraries/ChainId.sol';
 import './interfaces/INonfungiblePositionManager.sol';
 import './interfaces/INonfungibleTokenPositionDescriptor.sol';
@@ -14,20 +12,18 @@ import './interfaces/IERC20Metadata.sol';
 import './libraries/PoolAddress.sol';
 import './libraries/NFTDescriptor.sol';
 import './libraries/TokenRatioSortOrder.sol';
+import './interfaces/IUniswapV3Pool.sol';
 
-
-/// @title Describes NFT token positions
-/// @notice Produces a string containing the data URI for a JSON metadata string
 contract NonfungibleTokenPositionDescriptor is INonfungibleTokenPositionDescriptor {
-    address private constant MOOP = 0x75965BE2a4C8bA0E9003A512c1914B71e4101EF0;
-    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address private constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address private constant TBTC = 0x8dAEBADE922dF735c38C80C7eBD708Af50815fAa;
-    address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    // Update token addresses for Sepolia (placeholders until actual addresses are provided)
+    address private constant MOOP = 0x0000000000000000000000000000000000000000;
+    address private constant DAI = 0x0000000000000000000000000000000000000000;
+    address private constant USDC = 0x0000000000000000000000000000000000000000;
+    address private constant USDT = 0x0000000000000000000000000000000000000000;
+    address private constant TBTC = 0x0000000000000000000000000000000000000000;
+    address private constant WBTC = 0x0000000000000000000000000000000000000000;
 
     address public immutable WETH9;
-    /// @dev A null-terminated string
     bytes32 public immutable nativeCurrencyLabelBytes;
 
     constructor(address _WETH9, bytes32 _nativeCurrencyLabelBytes) {
@@ -35,7 +31,6 @@ contract NonfungibleTokenPositionDescriptor is INonfungibleTokenPositionDescript
         nativeCurrencyLabelBytes = _nativeCurrencyLabelBytes;
     }
 
-    /// @notice Returns the native currency label as a string
     function nativeCurrencyLabel() public view returns (string memory) {
         uint256 len = 0;
         while (len < 32 && nativeCurrencyLabelBytes[len] != 0) {
@@ -48,7 +43,6 @@ contract NonfungibleTokenPositionDescriptor is INonfungibleTokenPositionDescript
         return string(b);
     }
 
-    /// @inheritdoc INonfungibleTokenPositionDescriptor
     function tokenURI(INonfungiblePositionManager positionManager, uint256 tokenId)
         external
         view
@@ -104,27 +98,28 @@ contract NonfungibleTokenPositionDescriptor is INonfungibleTokenPositionDescript
         return tokenRatioPriority(token0, chainId) > tokenRatioPriority(token1, chainId);
     }
 
-function tokenRatioPriority(address token, uint256 chainId) public view returns (int256) {
-    if (token == WETH9) {
-        return TokenRatioSortOrder.DENOMINATOR;
-    }
-    if (chainId == 1) {
-        if (token == MOOP) {
-            return TokenRatioSortOrder.NUMERATOR_VERY_MOST; // Add new priority
-        } else if (token == USDC) {
-            return TokenRatioSortOrder.NUMERATOR_MOST;
-        } else if (token == USDT) {
-            return TokenRatioSortOrder.NUMERATOR_MORE;
-        } else if (token == DAI) {
-            return TokenRatioSortOrder.NUMERATOR;
-        } else if (token == TBTC) {
-            return TokenRatioSortOrder.DENOMINATOR_MORE;
-        } else if (token == WBTC) {
-            return TokenRatioSortOrder.DENOMINATOR_MOST;
-        } else {
-            return 0;
+    function tokenRatioPriority(address token, uint256 chainId) public view returns (int256) {
+        if (token == WETH9) {
+            return TokenRatioSortOrder.DENOMINATOR;
         }
+        if (chainId == 11155111) { // Sepolia chain ID
+            // Replace with actual Sepolia addresses if available
+            if (token == MOOP) {
+                return TokenRatioSortOrder.NUMERATOR_VERY_MOST;
+            } else if (token == USDC) {
+                return TokenRatioSortOrder.NUMERATOR_MOST;
+            } else if (token == USDT) {
+                return TokenRatioSortOrder.NUMERATOR_MORE;
+            } else if (token == DAI) {
+                return TokenRatioSortOrder.NUMERATOR;
+            } else if (token == TBTC) {
+                return TokenRatioSortOrder.DENOMINATOR_MORE;
+            } else if (token == WBTC) {
+                return TokenRatioSortOrder.DENOMINATOR_MOST;
+            } else {
+                return 0;
+            }
+        }
+        return 0;
     }
-    return 0;
-}
 }

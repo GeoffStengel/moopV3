@@ -1,41 +1,31 @@
-// src/wagmi-config.js
-//import { configureChains, createConfig } from 'wagmi';
-//import { publicProvider } from 'wagmi/providers/public';
-//import { mainnet, sepolia, localhost } from 'wagmi/chains';
-//import { injectedConnector } from 'wagmi/connectors/injected';
-//
-//const { chains, publicClient } = configureChains(
-//  [localhost, sepolia],
-//  [publicProvider()]
-//);
-//
-//export const config = createConfig({
-//  autoConnect: true,
-//  connectors: [
-//    injectedConnector({ chains }),
-//  ],
-//  publicClient,
-//});
-//
-//export { chains };
-//
-
-// src/wagmi-config.js
 import { createConfig, http } from 'wagmi';
 import { mainnet, sepolia, localhost } from 'wagmi/chains';
-import { injected } from 'wagmi/connectors';
+import { injected, walletConnect } from 'wagmi/connectors';
 
-import { INFURA_PROJECT_ID } from './infuraConfig'; // ✅ use from config
+import { INFURA_PROJECT_ID } from './infuraConfig';
 
+// Define the chains you want to support
 const chains = [mainnet, sepolia, localhost];
 
 export const config = createConfig({
-  connectors: [injected({ chains })],
   chains,
+  connectors: [
+    injected({ chains }), // MetaMask & browser wallets
+    walletConnect({
+      projectId: INFURA_PROJECT_ID, // You can also use a dedicated WC projectId
+      metadata: {
+        name: 'moop-dapp',
+        description: 'My decentralized app',
+        url: 'https://mydapp.com',
+        icons: ['https://mydapp.com/icon.png'],
+      },
+      showQrModal: true,
+    }),
+  ],
   transports: {
     [mainnet.id]: http(`https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`),
     [sepolia.id]: http(`https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}`),
-    [localhost.id]: http(), // default
+    [localhost.id]: http(), // default localhost RPC
   },
   ssr: false,
 });

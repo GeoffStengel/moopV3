@@ -1,5 +1,5 @@
 {
-  "name": "test2_swap",
+  "name": "moop-dapp",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -31,9 +31,6 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.4.2",
-    "@uniswap/lib": "^4.0.1-alpha",
-    "@uniswap/v3-core": "^1.0.1",
-    "@uniswap/v3-periphery": "^1.4.4",
     "base64-sol": "^1.0.1",
     "dotenv": "^17.2.1",
     "ethers": "^6.14.1"

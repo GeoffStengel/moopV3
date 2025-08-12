@@ -1,16 +1,16 @@
 // contracts/uniswap/libraries/NFTDescriptor.sol
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.7.0;
+pragma solidity ^0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
-import '@uniswap/v3-core/contracts/libraries/BitMath.sol';
-import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
-import '@openzeppelin/contracts/utils/Strings.sol';
-import '@openzeppelin/contracts/math/SafeMath.sol';
-import '@openzeppelin/contracts/math/SignedSafeMath.sol';
-import "./base64.sol";
+import '../interfaces/IUniswapV3Pool.sol';
+import './TickMath.sol';
+import './BitMath.sol';
+import './FullMath.sol';
+import './Strings.sol';
+import './SafeMath.sol';
+import './SignedSafeMath.sol';
+import './Base64.sol';
 import './HexStrings.sol';
 import './NFTSVG.sol';
 import './SVGUtils.sol';
@@ -43,7 +43,6 @@ library NFTDescriptor {
         address poolAddress;
     }
 
-    // Add this struct
     struct DecimalStringParams {
         uint256 sigfigs;
         uint8 bufferLength;
@@ -56,22 +55,36 @@ library NFTDescriptor {
     }
 
     function constructTokenURI(ConstructTokenURIParams memory params) public pure returns (string memory) {
-        string memory name = generateName(params, feeToPercentString(params.fee));
+        string memory name = generateName(params, SVGUtils.feeToPercentString(params.fee));
         string memory descriptionPartOne =
             generateDescriptionPartOne(
                 escapeQuotes(params.quoteTokenSymbol),
                 escapeQuotes(params.baseTokenSymbol),
-                addressToString(params.poolAddress)
+                SVGUtils.addressToString(params.poolAddress)
             );
         string memory descriptionPartTwo =
             generateDescriptionPartTwo(
                 params.tokenId.toString(),
                 escapeQuotes(params.baseTokenSymbol),
-                addressToString(params.quoteTokenAddress),
-                addressToString(params.baseTokenAddress),
-                feeToPercentString(params.fee)
+                SVGUtils.addressToString(params.quoteTokenAddress),
+                SVGUtils.addressToString(params.baseTokenAddress),
+                SVGUtils.feeToPercentString(params.fee)
             );
-        string memory image = Base64.encode(bytes(generateSVGImage(params)));
+        // Create SVGUtils.ConstructTokenURIParams to match expected struct
+        SVGUtils.ConstructTokenURIParams memory svgParams = SVGUtils.ConstructTokenURIParams({
+            quoteTokenAddress: params.quoteTokenAddress,
+            baseTokenAddress: params.baseTokenAddress,
+            poolAddress: params.poolAddress,
+            quoteTokenSymbol: params.quoteTokenSymbol,
+            baseTokenSymbol: params.baseTokenSymbol,
+            fee: params.fee,
+            tickLower: params.tickLower,
+            tickUpper: params.tickUpper,
+            tickCurrent: params.tickCurrent,
+            tickSpacing: params.tickSpacing,
+            tokenId: params.tokenId
+        });
+        string memory image = Base64.encode(bytes(SVGUtils.generateSVGImage(svgParams)));
 
         return
             string(
@@ -300,24 +313,19 @@ library NFTDescriptor {
 
         bool priceBelow1 = adjustedSqrtRatioX96 < 2**96;
         if (priceBelow1) {
-            // 10 ** 43 is precision needed to retreive 5 sigfigs of smallest possible price + 1 for rounding
             value = FullMath.mulDiv(value, 10**44, 1 << 128);
         } else {
-            // leave precision for 4 decimal places + 1 place for rounding
             value = FullMath.mulDiv(value, 10**5, 1 << 128);
         }
 
-        // get digit count
         uint256 temp = value;
         uint8 digits;
         while (temp != 0) {
             digits++;
             temp /= 10;
         }
-        // don't count extra digit kept for rounding
         digits = digits - 1;
 
-        // address rounding
         (uint256 sigfigs, bool extraDigit) = sigfigsRounded(value, digits);
         if (extraDigit) {
             digits++;
@@ -325,19 +333,16 @@ library NFTDescriptor {
 
         DecimalStringParams memory params;
         if (priceBelow1) {
-            // 7 bytes ( "0." and 5 sigfigs) + leading 0's bytes
             params.bufferLength = uint8(uint8(7).add(uint8(43).sub(digits)));
             params.zerosStartIndex = 2;
             params.zerosEndIndex = uint8(uint256(43).sub(digits).add(1));
             params.sigfigIndex = uint8(params.bufferLength.sub(1));
         } else if (digits >= 9) {
-            // no decimal in price string
             params.bufferLength = uint8(digits.sub(4));
             params.zerosStartIndex = 5;
             params.zerosEndIndex = uint8(params.bufferLength.sub(1));
             params.sigfigIndex = 4;
         } else {
-            // 5 sigfigs surround decimal
             params.bufferLength = 6;
             params.sigfigIndex = 5;
             params.decimalIndex = uint8(digits.sub(5).add(1));
@@ -347,97 +352,5 @@ library NFTDescriptor {
         params.isPercent = false;
 
         return generateDecimalString(params);
-    }
-
-    function feeToPercentString(uint24 fee) internal pure returns (string memory) {
-        if (fee == 0) {
-            return '0%';
-        }
-        uint24 temp = fee;
-        uint256 digits;
-        uint8 numSigfigs;
-        while (temp != 0) {
-            if (numSigfigs > 0) {
-                // count all digits preceding least significant figure
-                numSigfigs++;
-            } else if (temp % 10 != 0) {
-                numSigfigs++;
-            }
-            digits++;
-            temp /= 10;
-        }
-
-        DecimalStringParams memory params;
-        uint256 nZeros;
-        if (digits >= 5) {
-            // if decimal > 1 (5th digit is the ones place)
-            uint256 decimalPlace = digits.sub(numSigfigs) >= 4 ? 0 : 1;
-            nZeros = digits.sub(5) < (numSigfigs.sub(1)) ? 0 : digits.sub(5).sub(numSigfigs.sub(1));
-            params.zerosStartIndex = numSigfigs;
-            params.zerosEndIndex = uint8(params.zerosStartIndex.add(nZeros).sub(1));
-            params.sigfigIndex = uint8(params.zerosStartIndex.sub(1).add(decimalPlace));
-            params.bufferLength = uint8(nZeros.add(numSigfigs.add(1)).add(decimalPlace));
-        } else {
-            // else if decimal < 1
-            nZeros = uint256(5).sub(digits);
-            params.zerosStartIndex = 2;
-            params.zerosEndIndex = uint8(nZeros.add(params.zerosStartIndex).sub(1));
-            params.bufferLength = uint8(nZeros.add(numSigfigs.add(2)));
-            params.sigfigIndex = uint8((params.bufferLength).sub(2));
-            params.isLessThanOne = true;
-        }
-        params.sigfigs = uint256(fee).div(10**(digits.sub(numSigfigs)));
-        params.isPercent = true;
-        params.decimalIndex = digits > 4 ? uint8(digits.sub(4)) : 0;
-
-        return generateDecimalString(params);
-    }
-
-    function addressToString(address addr) internal pure returns (string memory) {
-        return (uint256(addr)).toHexString(20);
-    }
-
-    function generateSVGImage(ConstructTokenURIParams memory params) internal pure returns (string memory svg) {
-        return SVGUtils.generateSVGImage(params);
-    }
-
-    function overRange(
-        int24 tickLower,
-        int24 tickUpper,
-        int24 tickCurrent
-    ) internal pure returns (int8) {
-        if (tickCurrent < tickLower) {
-            return -1;
-        } else if (tickCurrent > tickUpper) {
-            return 1;
-        } else {
-            return 0;
-        }
-    }
-
-    function scale(
-        uint256 n,
-        uint256 inMn,
-        uint256 inMx,
-        uint256 outMn,
-        uint256 outMx
-    ) internal pure returns (string memory) {
-        return (n.sub(inMn).mul(outMx.sub(outMn)).div(inMx.sub(inMn)).add(outMn)).toString();
-    }
-
-    function tokenToColorHex(uint256 token, uint256 offset) internal pure returns (string memory str) {
-        return string((token >> offset).toHexStringNoPrefix(3));
-    }
-
-    function getCircleCoord(
-        uint256 tokenAddress,
-        uint256 offset,
-        uint256 tokenId
-    ) internal pure returns (uint256) {
-        return (sliceTokenHex(tokenAddress, offset) * tokenId) % 255;
-    }
-
-    function sliceTokenHex(uint256 token, uint256 offset) internal pure returns (uint256) {
-        return uint256(uint8(token >> offset));
     }
 }

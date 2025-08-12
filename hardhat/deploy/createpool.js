@@ -1,4 +1,4 @@
-// test2_swap/frontend/src/CreatePool.jsx
+// moop-dapp/frontend/src/CreatePool.jsx
 import React, { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useSigner } from 'wagmi';
